@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Live Logs{% endblock %}
+{% block nav_logs %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📋 Live Event Stream</h1>
+    <div class="header-controls">
+        <span id="event-count" class="badge">0 events</span>
+        <button id="btn-clear" class="btn btn-secondary" onclick="clearLogs()">Clear</button>
+        <button id="btn-pause" class="btn btn-primary" onclick="togglePause()">⏸ Pause</button>
+    </div>
+</div>
+
+<div class="filters">
+    <input type="text" id="filter-device" placeholder="Filter by device ID..." class="input-filter">
+    <select id="filter-type" class="input-filter" onchange="applyFilters()">
+        <option value="">All event types</option>
+        <option value="APP_USAGE">APP_USAGE</option>
+        <option value="KEYSTROKE">KEYSTROKE</option>
+        <option value="TOUCH">TOUCH</option>
+        <option value="SWIPE">SWIPE</option>
+        <option value="LOCATION">LOCATION</option>
+        <option value="NETWORK">NETWORK</option>
+    </select>
+</div>
+
+<div class="log-container" id="log-container">
+    <div class="log-placeholder">
+        <span class="placeholder-icon">📡</span>
+        <p>Waiting for events from devices...</p>
+        <p class="placeholder-sub">Events will appear here in real-time when devices connect.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    initLogViewer();
+</script>
+{% endblock %}
