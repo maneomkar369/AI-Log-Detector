@@ -7,7 +7,7 @@ Stores raw behavioral events received from Android devices.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, DateTime, Text, BigInteger, ForeignKey
+from sqlalchemy import String, DateTime, Text, BigInteger, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
@@ -18,7 +18,7 @@ class BehaviorEvent(Base):
 
     __tablename__ = "behavior_events"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     device_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("devices.id"), index=True
     )

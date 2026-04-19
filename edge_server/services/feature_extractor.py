@@ -6,7 +6,7 @@ over a time window:
 
   Temporal   (24 dims) — Hour-of-day app usage distribution
   Sequential (28 dims) — Markov transition probabilities between top apps
-  Interaction(20 dims) — Keystroke latency, touch duration, swipe velocity
+    Interaction(20 dims) — Interaction + network + security/system summary signals
 """
 
 import json
@@ -141,44 +141,85 @@ class FeatureExtractor:
 
     def _extract_interaction(self, events: List[dict]) -> np.ndarray:
         """
-        Keystroke and touch interaction features.
+        Interaction, network, and security/system features.
 
         Layout (20 dims):
         - Keystroke timing stats (5 dims): mean, std, min, max, count
         - Touch duration stats  (5 dims): mean, std, min, max, count
         - Swipe velocity stats  (5 dims): mean, std, min, max, count
-        - Combined stats        (5 dims): total events, type ratios, burstiness
+        - Combined stats        (5 dims): total, interaction ratio,
+                                         network signal,
+                                         security ratio,
+                                         burst/system signal
         """
         keystroke_times = []
         touch_durations = []
         swipe_velocities = []
+        interaction_event_count = 0
+
+        network_event_count = 0
+        network_bytes = []
+
+        security_event_count = 0
+
+        system_event_count = 0
+        system_state_samples = 0
+        low_memory_count = 0
+        battery_low_count = 0
+        logcat_access_samples = 0
+        logcat_restricted_count = 0
 
         for ev in events:
-            data = ev.get("data")
-            if isinstance(data, str):
-                try:
-                    data = json.loads(data)
-                except (json.JSONDecodeError, TypeError):
-                    data = {}
-            elif not isinstance(data, dict):
-                data = {}
-
-            etype = ev.get("event_type", "")
+            data = self._parse_data(ev.get("data"))
+            etype = str(ev.get("event_type", "")).upper()
 
             if etype in ("KEYSTROKE", "keystroke"):
                 latency = data.get("latency", data.get("interval"))
                 if latency is not None:
                     keystroke_times.append(float(latency))
+                    interaction_event_count += 1
 
             elif etype in ("TOUCH", "touch"):
                 dur = data.get("duration")
                 if dur is not None:
                     touch_durations.append(float(dur))
+                    interaction_event_count += 1
 
             elif etype in ("SWIPE", "swipe"):
                 vel = data.get("velocity", data.get("speed"))
                 if vel is not None:
                     swipe_velocities.append(float(vel))
+                    interaction_event_count += 1
+
+            elif etype in ("NETWORK_TRAFFIC", "NETWORK_APP"):
+                network_event_count += 1
+                rx = self._safe_float(data.get("rxBytesDelta"), default=0.0)
+                tx = self._safe_float(data.get("txBytesDelta"), default=0.0)
+                network_bytes.append(max(0.0, rx) + max(0.0, tx))
+
+            elif etype.startswith("SECURITY_"):
+                security_event_count += 1
+
+            elif etype == "SYSTEM_STATE":
+                system_event_count += 1
+                system_state_samples += 1
+
+                if bool(data.get("lowMemory", False)):
+                    low_memory_count += 1
+
+                battery_pct = self._safe_float(data.get("batteryPct"), default=-1.0)
+                if 0 <= battery_pct <= 15:
+                    battery_low_count += 1
+
+            elif etype == "SYSTEM_LOGCAT_ACCESS":
+                system_event_count += 1
+                logcat_access_samples += 1
+                status = str(data.get("status", "")).lower()
+                if status in ("restricted", "error"):
+                    logcat_restricted_count += 1
+
+            elif etype.startswith("SYSTEM_"):
+                system_event_count += 1
 
         def stat_block(values: list) -> np.ndarray:
             """Return [mean, std, min, max, count_normalized]."""
@@ -199,15 +240,43 @@ class FeatureExtractor:
 
         # Combined stats (5 dims)
         total = max(len(events), 1)
+        network_mb = sum(network_bytes) / (1024.0 * 1024.0)
+        network_signal = min(1.0, (network_event_count / total) + min(network_mb / 10.0, 1.0) * 0.5)
+
+        system_sample_count = max(system_state_samples + logcat_access_samples, 1)
+        system_pressure = (low_memory_count + battery_low_count) / max(system_state_samples * 2, 1)
+        logcat_restriction_ratio = logcat_restricted_count / system_sample_count
+        system_signal = max(system_event_count / total, system_pressure, logcat_restriction_ratio)
+
         combined = np.array([
             min(total / 500.0, 1.0),  # Total events normalized
-            len(keystroke_times) / total,
-            len(touch_durations) / total,
-            len(swipe_velocities) / total,
-            self._burstiness(events),
+            interaction_event_count / total,
+            network_signal,
+            security_event_count / total,
+            max(self._burstiness(events), system_signal),
         ], dtype=np.float64)
 
         return np.concatenate([k_stats, t_stats, s_stats, combined])
+
+    @staticmethod
+    def _parse_data(data):
+        """Parse event payload into dict without raising."""
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except (json.JSONDecodeError, TypeError):
+                data = {}
+        elif not isinstance(data, dict):
+            data = {}
+        return data
+
+    @staticmethod
+    def _safe_float(value, default: float = 0.0) -> float:
+        """Convert a value to float safely."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
 
     @staticmethod
     def _burstiness(events: List[dict]) -> float:

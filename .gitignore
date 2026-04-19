@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
 *.egg-info/
@@ -8,6 +9,8 @@ build/
 *.egg
 venv/
 .venv/
+.venv311/
+edge_server/.venv311/
 *.so
 
 # Environment
@@ -32,6 +35,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+.logs/
 
 # Docker
 docker-compose.override.yml
@@ -43,6 +47,7 @@ android/app/build/
 android/local.properties
 android/*.iml
 android/.idea/
+android/latest_ui*.png
 
 # Redis
 dump.rdb

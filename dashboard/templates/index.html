@@ -1,41 +1,283 @@
 {% extends "base.html" %}
-{% block title %}Live Logs{% endblock %}
-{% block nav_logs %}active{% endblock %}
+{% block title %}Monitoring Console{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>📋 Live Event Stream</h1>
-    <div class="header-controls">
-        <span id="event-count" class="badge">0 events</span>
-        <button id="btn-clear" class="btn btn-secondary" onclick="clearLogs()">Clear</button>
-        <button id="btn-pause" class="btn btn-primary" onclick="togglePause()">⏸ Pause</button>
-    </div>
-</div>
+<div id="dashboard-root" class="page-shell">
+    <section id="dashboard" class="glass-card section-card">
+        <div class="section-head">
+            <div>
+                <h1>Dashboard</h1>
+                <p class="section-subtitle">Real-time anomaly intelligence with 7-day behavioral trends.</p>
+            </div>
+            <span class="status-pill">Updated <strong id="summary-updated">--</strong></span>
+        </div>
 
-<div class="filters">
-    <input type="text" id="filter-device" placeholder="Filter by device ID..." class="input-filter">
-    <select id="filter-type" class="input-filter" onchange="applyFilters()">
-        <option value="">All event types</option>
-        <option value="APP_USAGE">APP_USAGE</option>
-        <option value="KEYSTROKE">KEYSTROKE</option>
-        <option value="TOUCH">TOUCH</option>
-        <option value="SWIPE">SWIPE</option>
-        <option value="LOCATION">LOCATION</option>
-        <option value="NETWORK">NETWORK</option>
-    </select>
-</div>
+        <div class="metric-grid">
+            <article class="metric-card">
+                <p class="metric-label">Total Anomalies</p>
+                <p class="metric-value" id="metric-total-anomalies">0</p>
+            </article>
+            <article class="metric-card">
+                <p class="metric-label">Critical Alerts</p>
+                <p class="metric-value" id="metric-critical-alerts">0</p>
+            </article>
+            <article class="metric-card">
+                <p class="metric-label">Network Events</p>
+                <p class="metric-value" id="metric-network-events">0</p>
+            </article>
+            <article class="metric-card">
+                <p class="metric-label">Auth Failures</p>
+                <p class="metric-value" id="metric-auth-failures">0</p>
+            </article>
+        </div>
 
-<div class="log-container" id="log-container">
-    <div class="log-placeholder">
-        <span class="placeholder-icon">📡</span>
-        <p>Waiting for events from devices...</p>
-        <p class="placeholder-sub">Events will appear here in real-time when devices connect.</p>
-    </div>
+        <div class="chart-grid">
+            <article class="glass-panel">
+                <h3>7-Day Trend by Signal Type</h3>
+                <canvas id="trend-chart"></canvas>
+            </article>
+            <article class="glass-panel">
+                <h3>Today's Distribution</h3>
+                <canvas id="distribution-chart"></canvas>
+            </article>
+        </div>
+
+        <article class="glass-panel">
+            <div class="table-head">
+                <h3>Recent Events</h3>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Device</th>
+                            <th>Source</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-events-body">
+                        <tr>
+                            <td colspan="6" class="empty-row">Waiting for analytics data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </section>
+
+    <section id="live-logs" class="glass-card section-card">
+        <div class="section-head">
+            <div>
+                <h2>Live Logs</h2>
+                <p class="section-subtitle">Streaming adb logcat table with raw tag and severity details.</p>
+            </div>
+            <div class="header-actions">
+                <span id="adb-log-count" class="status-pill">0 lines</span>
+                <button id="btn-pause-logs" class="btn btn-secondary" type="button">Pause Stream</button>
+                <button id="btn-clear-logs" class="btn btn-primary" type="button">Clear</button>
+            </div>
+        </div>
+
+        <div class="table-wrap log-wrap">
+            <table class="data-table mono-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Buffer</th>
+                        <th>PID</th>
+                        <th>Tag</th>
+                        <th>Severity</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody id="adb-log-body">
+                    <tr>
+                        <td colspan="6" class="empty-row">Waiting for adb logcat stream...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="adb-config" class="glass-card section-card">
+        <div class="section-head">
+            <div>
+                <h2>ADB Config</h2>
+                <p class="section-subtitle">Live status, running commands, and runtime logcat controls.</p>
+            </div>
+        </div>
+
+        <div class="config-grid">
+            <article class="glass-panel status-panel">
+                <h3>Connection Status</h3>
+                <div class="adb-connection-row">
+                    <span id="adb-connection-dot" class="pulse-dot offline"></span>
+                    <div>
+                        <p id="adb-connection-state" class="connection-title">Checking ADB...</p>
+                        <p id="adb-connection-message" class="muted">Waiting for device status.</p>
+                    </div>
+                </div>
+                <p class="muted">Last update: <span id="adb-last-updated">--</span></p>
+
+                <h4>Running Commands</h4>
+                <pre id="adb-command-list" class="command-block">Loading commands...</pre>
+            </article>
+
+            <article class="glass-panel">
+                <h3>Runtime Controls</h3>
+                <form id="adb-config-form" class="form-grid">
+                    <label for="adb-buffer">Buffer</label>
+                    <select id="adb-buffer" name="buffer">
+                        <option value="all">all</option>
+                        <option value="main">main</option>
+                        <option value="system">system</option>
+                        <option value="events">events</option>
+                        <option value="radio">radio</option>
+                        <option value="crash">crash</option>
+                    </select>
+
+                    <label for="adb-buffer-size">Buffer Size (KB)</label>
+                    <input id="adb-buffer-size" name="buffer_size_kb" type="number" min="64" max="4096" step="64" value="256">
+
+                    <label for="adb-poll-interval">Poll Interval (ms)</label>
+                    <input id="adb-poll-interval" name="poll_interval_ms" type="number" min="150" max="5000" step="50" value="400">
+
+                    <label for="adb-package-filter">Package Filter</label>
+                    <input id="adb-package-filter" name="package_filter" type="text" placeholder="com.example.app">
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" type="submit">Apply ADB Config</button>
+                        <span id="adb-config-feedback" class="muted"></span>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section id="profiles" class="glass-card section-card">
+        <div class="section-head">
+            <div>
+                <h2>Profiles</h2>
+                <p class="section-subtitle">Select a monitoring preset tuned for your session goals.</p>
+            </div>
+            <span class="status-pill">Active: <strong id="active-profile-label">Development</strong></span>
+        </div>
+
+        <div class="profile-grid" id="profile-grid">
+            <article class="profile-card" data-profile="Development">
+                <h3>Development</h3>
+                <p>Fast feedback, moderate detection, verbose diagnostics.</p>
+                <span class="active-badge">Active</span>
+            </article>
+            <article class="profile-card" data-profile="Security Audit">
+                <h3>Security Audit</h3>
+                <p>Strict auth monitoring and aggressive anomaly sensitivity.</p>
+                <span class="active-badge">Active</span>
+            </article>
+            <article class="profile-card" data-profile="Performance">
+                <h3>Performance</h3>
+                <p>Network and memory priority with reduced noise.</p>
+                <span class="active-badge">Active</span>
+            </article>
+            <article class="profile-card" data-profile="Production QA">
+                <h3>Production QA</h3>
+                <p>Balanced detection profile for release verification.</p>
+                <span class="active-badge">Active</span>
+            </article>
+        </div>
+    </section>
+
+    <section id="settings" class="glass-card section-card">
+        <div class="section-head">
+            <div>
+                <h2>Settings</h2>
+                <p class="section-subtitle">Detection rule toggles and output behavior controls.</p>
+            </div>
+        </div>
+
+        <form id="settings-form" class="settings-grid">
+            <article class="glass-panel setting-group">
+                <h3>Detection Rules</h3>
+
+                <div class="setting-row">
+                    <label for="setting-detect-crash">Crash Detection</label>
+                    <label class="switch">
+                        <input id="setting-detect-crash" type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label for="setting-auth-threshold">Auth Threshold</label>
+                    <select id="setting-auth-threshold">
+                        <option value="3">3 attempts</option>
+                        <option value="5">5 attempts</option>
+                        <option value="8">8 attempts</option>
+                        <option value="12">12 attempts</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label for="setting-cleartext-network">Cleartext Network Detection</label>
+                    <label class="switch">
+                        <input id="setting-cleartext-network" type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label for="setting-memory-anomaly">Memory Anomaly Level</label>
+                    <select id="setting-memory-anomaly">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </article>
+
+            <article class="glass-panel setting-group">
+                <h3>Output Options</h3>
+
+                <div class="setting-row">
+                    <label for="setting-sqlite-logging">SQLite Logging</label>
+                    <label class="switch">
+                        <input id="setting-sqlite-logging" type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label for="setting-ml-scoring">ML Scoring</label>
+                    <label class="switch">
+                        <input id="setting-ml-scoring" type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <label for="setting-export-format">Export Format</label>
+                    <select id="setting-export-format">
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                        <option value="parquet">Parquet</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">Save Settings</button>
+                    <span id="settings-feedback" class="muted"></span>
+                </div>
+            </article>
+        </form>
+    </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    initLogViewer();
+    initDashboardExperience();
 </script>
 {% endblock %}

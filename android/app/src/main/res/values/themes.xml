@@ -1,11 +1,14 @@
 <resources>
-    <style name="Theme.AnomalyDetector" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#3B82F6</item>
-        <item name="colorPrimaryVariant">#2563EB</item>
+    <style name="Theme.AnomalyDetector" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#7C9FFF</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#06B6D4</item>
-        <item name="android:statusBarColor">#0A0E17</item>
-        <item name="android:navigationBarColor">#0A0E17</item>
-        <item name="android:windowBackground">#0A0E17</item>
+        <item name="colorSecondary">#9A8FFF</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="fontFamily">@font/inter_regular</item>
+        <item name="android:statusBarColor">#F2F7FF</item>
+        <item name="android:navigationBarColor">#F2F7FF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">#F2F7FF</item>
     </style>
 </resources>

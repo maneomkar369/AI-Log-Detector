@@ -1,345 +1,184 @@
-# Setup Guide
+# Simple Full-Stack Setup Guide
 
-This guide helps you run the Behavioral Log Anomaly Detector in three modes:
+This guide runs the complete stack on one machine:
 
-- Option A: Quick local demo (mock server, fastest)
-- Option B: Full local stack with Docker Compose (recommended for full features)
-- Option C: Manual full stack (without Docker)
+- Edge server (FastAPI)
+- Dashboard (Flask + Socket.IO)
+- PostgreSQL
+- Redis
+- Android app connected through ngrok
+
+For Raspberry Pi edge deployment, see [EDGE_SERVER_RASPBERRY_PI_SETUP.md](EDGE_SERVER_RASPBERRY_PI_SETUP.md).
+
+## Project values used in this workspace
+
+- Repository URL: https://github.com/maneomkar369/AI-Log-Detector.git
+- Current ngrok domain in Android config: grid-scuff-diploma.ngrok-free.dev
+
+If your ngrok domain changes, update SERVER_URL in [android/app/src/main/java/com/anomalydetector/Config.kt](android/app/src/main/java/com/anomalydetector/Config.kt).
 
 ## 1. Prerequisites
 
-## System
-
-- Linux, macOS, or WSL2
-- Python 3.10+
+- Docker with Compose support
+- Android Studio (for the Android app)
+- JDK 17 for Android Gradle builds (Java 25 is not supported by this project tooling)
+- ngrok account + ngrok CLI
 - Git
-- Android Studio (for Android app)
-- ngrok account (for remote Android to local server)
 
-## Optional tools
+## 2. Start the full stack
 
-- Node.js + npm (for `wscat` WebSocket testing)
-- Docker + Docker Compose (for full stack)
-- PostgreSQL + Redis (manual full stack)
-
-## Project root
+From the project root:
 
 ```bash
-cd /home/vishal/jarvis/New-AI_log
+docker compose up -d --build
+docker compose ps
 ```
 
----
+Expected local services:
 
-## 2. Option A - Quick Test on PC (about 30 minutes)
+- Edge server: http://127.0.0.1:8000
+- Dashboard: http://127.0.0.1:5000
 
-Use this when you want the fastest end-to-end demo.
-
-### Step A1 - Start Edge Test Server (mock mode)
+Quick health checks:
 
 ```bash
-cd /home/vishal/jarvis/New-AI_log/edge_server
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python test_server.py
+curl -sS http://127.0.0.1:8000/api/health && echo
+curl -sS http://127.0.0.1:5000/api/dashboard/alerts && echo
 ```
 
-Expected startup banner:
+## 3. Expose the edge server with ngrok
+
+```bash
+ngrok config add-authtoken YOUR_NGROK_TOKEN
+ngrok http 8000
+```
+
+If you use a reserved domain:
+
+```bash
+ngrok http --domain=grid-scuff-diploma.ngrok-free.dev 8000
+```
+
+Take the HTTPS host and build Android WebSocket URL as:
 
 ```text
-============================================================
-  BEHAVIORAL ANOMALY DETECTOR - TEST SERVER
-============================================================
-  WebSocket : ws://localhost:8000/ws/{device_id}
-  REST API  : http://localhost:8000/api/
-  Docs      : http://localhost:8000/docs
-============================================================
+wss://grid-scuff-diploma.ngrok-free.dev/ws
 ```
 
-Open docs:
+## 4. Configure the Android app
 
-- http://localhost:8000/docs
-
-### Step A2 - Expose local server via ngrok (for Android)
-
-```bash
-ngrok authtoken YOUR_AUTH_TOKEN
-ngrok http 8000
-```
-
-Copy your forwarding URL, for example:
-
-- https://abc123.ngrok-free.app
-
-### Step A3 - Android app setup
-
-1. Open Android Studio.
-2. Open folder: `/home/vishal/jarvis/New-AI_log/android`.
-3. Wait for Gradle sync.
-4. Edit `app/src/main/java/com/anomalydetector/Config.kt`:
+Update SERVER_URL in [android/app/src/main/java/com/anomalydetector/Config.kt](android/app/src/main/java/com/anomalydetector/Config.kt):
 
 ```kotlin
-var SERVER_URL = "wss://abc123.ngrok-free.app/ws"
+var SERVER_URL = "wss://grid-scuff-diploma.ngrok-free.dev/ws"
 ```
 
-5. Connect Android phone (USB debugging enabled).
-6. Run the app.
+Then in Android Studio:
 
-### Step A4 - Grant Android permissions
+1. Open the [android](android) folder.
+2. Sync Gradle.
+3. Run the app on your device/emulator.
+4. Grant required permissions: Usage Access, Accessibility, Notifications.
 
-Grant all required permissions on the phone:
+## 5. Android log coverage (what is sent)
 
-- Usage Access
-- Accessibility Service
-- Notifications
+The app now sends these log categories to the server:
 
-### Step A5 - Trigger a mock anomaly
+- App behavior logs: APP_USAGE, KEYSTROKE, TOUCH, SWIPE
+- Network traffic logs: NETWORK_TRAFFIC (device-level deltas), NETWORK_APP (per-app UID deltas)
+- VPN flow logs (optional): NETWORK_FLOW, NETWORK_FLOW_STATUS
+- Security/auth logs: SECURITY_AUTH_EVENT (screen/auth state), SECURITY_PACKAGE_EVENT (install/update/remove)
+- System logs/state: SYSTEM_STATE (memory + battery), SYSTEM_LOGCAT_ACCESS (whether logcat is accessible)
 
-Install wscat (one time):
+VPN flow capture mode:
+
+- The app includes a VPN flow monitor service and permission flow in UI.
+- Safe mode is default (no TUN interception) to avoid breaking device connectivity.
+- To enable raw TUN mode without forwarding (not recommended), set:
+  - ENABLE_VPN_TUN_CAPTURE=true
+  - ENABLE_VPN_CAPTURE_WITHOUT_FORWARDING=true
+- To enable forwarding mode (recommended for connectivity), set:
+  - ENABLE_VPN_TUN_CAPTURE=true
+  - ENABLE_VPN_FORWARDER=true
+  - VPN_FORWARDER_COMMAND to a working tun2socks-style command on device.
+
+Example forwarder command:
+
+```text
+/data/local/tmp/tun2socks --tunfd %TUN_FD% --netif-ipaddr 10.42.0.2 --netif-netmask 255.255.255.0 --socks-server-addr 127.0.0.1:1080
+```
+
+Android platform limits:
+
+- Full device logcat is restricted on non-root consumer devices.
+- Deep packet inspection/network payload capture requires VPNService or root tooling.
+- Detailed auth failure logs are limited unless running as device owner/system app.
+
+Backend rule alerts now also trigger on high-risk windows, even if pure model distance is not extreme:
+
+- package modification bursts (SECURITY_PACKAGE_EVENT)
+- abnormal auth/screen churn (SECURITY_AUTH_EVENT)
+- high network burst with low-memory or critical-battery system stress
+
+## 6. Verify end-to-end flow
+
+Use one of these test methods.
+
+Method A (real app):
+
+1. Tap Start Monitoring in the Android app.
+2. Use the phone for a few minutes.
+3. Check backend stats/alerts with your device ID.
+
+Method B (simulator script):
 
 ```bash
-npm i -g wscat
+cd tests/load
+python3 -m venv .venv
+source .venv/bin/activate
+pip install websockets
+python simulate_devices.py --devices 1 --duration 90 --server ws://127.0.0.1:8000/ws
 ```
 
-Connect:
+Check data:
 
 ```bash
-wscat -c ws://localhost:8000/ws/test_device_001
+curl -sS http://127.0.0.1:8000/api/stats/YOUR_DEVICE_ID && echo
+curl -sS "http://127.0.0.1:8000/api/alerts/YOUR_DEVICE_ID?limit=5" && echo
 ```
 
-Generate a payload with 12 events (mock server alerts on more than 10 events in one batch):
+## 7. Stop services
 
 ```bash
-python3 -c "import json,time;print(json.dumps([{'type':'APP_USAGE','packageName':f'com.test{i}','timestamp':int(time.time()*1000)+i,'data':'{}'} for i in range(12)]))"
+docker compose down
 ```
 
-Paste that JSON into the open wscat session and press Enter.
-
-## Important notes for Option A
-
-- The dashboard can run, but live streaming requires Redis channel publishing.
-- The mock server is for quick testing and does not represent full production behavior.
-
----
-
-## 3. Option B - Full Local Stack with Docker Compose (recommended)
-
-Use this mode when you need full pipeline behavior:
-
-- PostgreSQL persistence
-- Redis buffering and pub/sub
-- Real anomaly pipeline
-- Dashboard + edge server together
-
-### Step B1 - Prepare environment file
+If you want to also remove volumes:
 
 ```bash
-cd /home/vishal/jarvis/New-AI_log
-cp .env.example .env
-nano .env
+docker compose down -v
 ```
 
-Set at least these values:
+## 8. Common issues
 
-```env
-DATABASE_URL=postgresql+asyncpg://admin:your_password@localhost:5432/anomaly_detection
-REDIS_URL=redis://localhost:6379/0
-NGROK_AUTH_TOKEN=your_ngrok_token
-DASHBOARD_SECRET_KEY=replace-with-a-random-secret
-```
+Port already in use:
 
-### Step B2 - Start services
+- Stop old local processes using port 8000/5000, then restart compose.
+
+Android shows Disconnected:
+
+- Verify SERVER_URL uses wss:// and ends with /ws.
+- Verify ngrok tunnel is still running.
+
+Dashboard has no live updates:
+
+- Verify Redis container is healthy with docker compose ps.
+
+Android Gradle build fails with java.lang.IllegalArgumentException: 25.0.2:
+
+- Run Gradle with Java 17.
+- Example command:
 
 ```bash
-docker-compose up -d
+JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew :app:compileDebugKotlin
 ```
-
-Services:
-
-- Edge server: http://localhost:8000
-- Dashboard: http://localhost:5000
-- PostgreSQL: localhost:5432
-- Redis: localhost:6379
-
-### Step B3 - Verify health
-
-```bash
-curl http://localhost:8000/api/health
-curl http://localhost:5000/api/dashboard/alerts
-docker-compose ps
-```
-
-### Step B4 - Connect Android app
-
-If Android is on another network/device, expose edge server:
-
-```bash
-ngrok authtoken YOUR_AUTH_TOKEN
-ngrok http 8000
-```
-
-Then update Android `SERVER_URL` with your ngrok WSS URL ending in `/ws`.
-
-## Important notes for Option B
-
-- Dashboard approve/deny buttons call `/api/alerts/...`.
-- For those buttons to work from dashboard UI, you need reverse proxy routing (`/api` -> edge server), or you must call edge API directly on port 8000.
-
----
-
-## 4. Option C - Manual Full Setup (without Docker)
-
-Use this if you prefer running each service directly.
-
-### Step C1 - Install system dependencies
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3-pip python3-venv postgresql redis-server nginx git
-```
-
-### Step C2 - Configure PostgreSQL
-
-```bash
-sudo -u postgres psql << EOF
-CREATE DATABASE anomaly_detection;
-CREATE USER admin WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE anomaly_detection TO admin;
-\q
-EOF
-```
-
-### Step C3 - Start Redis
-
-```bash
-sudo systemctl enable redis-server
-sudo systemctl start redis-server
-```
-
-### Step C4 - Run edge server
-
-```bash
-cd /home/vishal/jarvis/New-AI_log/edge_server
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py
-```
-
-### Step C5 - Run dashboard
-
-Open a second terminal:
-
-```bash
-cd /home/vishal/jarvis/New-AI_log/dashboard
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
-
----
-
-## 5. Optional Production-Style Services (systemd)
-
-```bash
-cd /home/vishal/jarvis/New-AI_log
-sudo cp deploy/anomaly-detection.service /etc/systemd/system/
-sudo cp deploy/ngrok.service /etc/systemd/system/
-
-# Edit service files to match your machine paths/domain
-sudo nano /etc/systemd/system/anomaly-detection.service
-sudo nano /etc/systemd/system/ngrok.service
-
-sudo systemctl daemon-reload
-sudo systemctl enable anomaly-detection ngrok
-sudo systemctl start anomaly-detection ngrok
-```
-
-Check status:
-
-```bash
-sudo systemctl status anomaly-detection
-sudo systemctl status ngrok
-```
-
----
-
-## 6. Optional Nginx Reverse Proxy
-
-```bash
-cd /home/vishal/jarvis/New-AI_log
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/anomaly-detector
-sudo ln -s /etc/nginx/sites-available/anomaly-detector /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-This is useful to:
-
-- Serve dashboard and API under one domain
-- Route `/ws` and `/api` to edge server
-- Enable dashboard action buttons without custom frontend changes
-
----
-
-## 7. Pipeline Testing
-
-### Health check
-
-```bash
-curl http://localhost:8000/api/health
-```
-
-### WebSocket test client
-
-```bash
-wscat -c ws://localhost:8000/ws/test_device_001
-```
-
-### Mock mode payload (test_server.py)
-
-Use more than 10 events in one batch to trigger alert.
-
-### Full edge mode payload (main.py)
-
-The Redis batch analyzer processes windows of 50 events, so send at least 50 events for quick detection cycles.
-
----
-
-## 8. Troubleshooting
-
-### Dashboard shows no live events
-
-- Ensure Redis is running.
-- Ensure you are using full edge server mode (not only mock test server).
-
-### Dashboard approve/deny returns 404
-
-- You are likely opening dashboard directly on port 5000 without reverse proxy.
-- Use Nginx routing for `/api` to edge server, or call edge API directly on port 8000.
-
-### Android build fails with missing drawable `card_bg`
-
-- Check `activity_main.xml` references.
-- Add the missing drawable resource or replace the background reference.
-
-### ngrok URL works in browser but Android cannot connect
-
-- Use `wss://.../ws` format in `Config.kt`.
-- Confirm your phone has internet access.
-- Regenerate URL if ngrok session expired.
-
-### Edge server starts but ingestion fails
-
-- Verify Redis connection URL.
-- Verify PostgreSQL credentials if running full mode.
-
----
-
-## 9. Suggested First Validation Sequence
-
-1. Run Option A and confirm Android connects.
-2. Trigger mock alert with a large batch.
-3. Move to Option B for full Redis/PostgreSQL workflow.
-4. Add Nginx routing when testing dashboard actions end-to-end.

@@ -99,10 +99,10 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             data = await websocket.receive_text()
             await connection_manager.handle_message(device_id, data)
     except WebSocketDisconnect:
-        connection_manager.disconnect(device_id)
+        connection_manager.disconnect(device_id, websocket)
     except Exception as e:
         logger.error("WebSocket error for %s: %s", device_id, e)
-        connection_manager.disconnect(device_id)
+        connection_manager.disconnect(device_id, websocket)
 
 
 # ── Root ──

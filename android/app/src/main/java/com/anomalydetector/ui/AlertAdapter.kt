@@ -4,8 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -23,8 +23,15 @@ class AlertAdapter(
     private val onDeny: (Alert) -> Unit,
 ) : ListAdapter<Alert, AlertAdapter.ViewHolder>(DIFF) {
 
+    private data class SeverityUi(
+        val label: String,
+        val color: Int,
+        val iconRes: Int,
+    )
+
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textSeverity: TextView = view.findViewById(R.id.textSeverity)
+        val iconSeverity: ImageView = view.findViewById(R.id.iconSeverity)
         val textThreatType: TextView = view.findViewById(R.id.textThreatType)
         val textMessage: TextView = view.findViewById(R.id.textMessage)
         val textConfidence: TextView = view.findViewById(R.id.textConfidence)
@@ -43,28 +50,60 @@ class AlertAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val alert = getItem(position)
-        val ctx = holder.itemView.context
 
-        holder.textSeverity.text = "Severity ${alert.severity}/10"
-        holder.textThreatType.text = alert.threatType
+        val severityUi = when {
+            alert.severity >= 8 -> SeverityUi(
+                label = "Critical",
+                color = android.graphics.Color.parseColor("#D90429"),
+                iconRes = R.drawable.ic_alert_critical,
+            )
+            alert.severity >= 4 -> SeverityUi(
+                label = "Warning",
+                color = android.graphics.Color.parseColor("#F57C00"),
+                iconRes = R.drawable.ic_alert_warning,
+            )
+            else -> SeverityUi(
+                label = "Normal",
+                color = android.graphics.Color.parseColor("#16A34A"),
+                iconRes = R.drawable.ic_alert_normal,
+            )
+        }
+
+        holder.textSeverity.text = "${severityUi.label} · ${alert.severity}/10"
+        holder.iconSeverity.setImageResource(severityUi.iconRes)
+        holder.iconSeverity.setColorFilter(severityUi.color)
+        holder.textThreatType.text = "Type: ${alert.threatType}"
         holder.textMessage.text = alert.message
         holder.textConfidence.text = "Confidence: ${(alert.confidence * 100).toInt()}%"
         holder.textTime.text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             .format(Date(alert.receivedAt))
-        holder.textStatus.text = alert.status.uppercase()
-
-        // Severity color
-        val color = when {
-            alert.severity >= 9 -> android.graphics.Color.parseColor("#EF4444")
-            alert.severity >= 7 -> android.graphics.Color.parseColor("#F97316")
-            alert.severity >= 4 -> android.graphics.Color.parseColor("#F59E0B")
-            else -> android.graphics.Color.parseColor("#10B981")
+        val status = alert.status.lowercase(Locale.getDefault())
+        holder.textStatus.text = status.replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
         }
-        holder.severityBar.setBackgroundColor(color)
-        holder.textSeverity.setTextColor(color)
+
+        holder.severityBar.setBackgroundColor(severityUi.color)
+        holder.textSeverity.setTextColor(severityUi.color)
+
+        val (statusBackgroundRes, statusTextColor) = when (status) {
+            "approved" -> Pair(
+                R.drawable.bg_alert_status_approved,
+                android.graphics.Color.parseColor("#1B8B50"),
+            )
+            "denied", "rejected" -> Pair(
+                R.drawable.bg_alert_status_denied,
+                android.graphics.Color.parseColor("#C3273C"),
+            )
+            else -> Pair(
+                R.drawable.bg_alert_status_pending,
+                android.graphics.Color.parseColor("#A15E10"),
+            )
+        }
+        holder.textStatus.setBackgroundResource(statusBackgroundRes)
+        holder.textStatus.setTextColor(statusTextColor)
 
         // Show/hide action buttons based on status
-        val isPending = alert.status == "pending"
+        val isPending = status == "pending"
         holder.btnApprove.visibility = if (isPending) View.VISIBLE else View.GONE
         holder.btnDeny.visibility = if (isPending) View.VISIBLE else View.GONE
 

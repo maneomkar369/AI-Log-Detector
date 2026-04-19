@@ -8,6 +8,12 @@ The Behavioral Log Anomaly Detector is an end‑to‑end security system that co
 
 Unlike traditional antivirus solutions that rely on signature databases, this system builds a dynamic behavioral baseline for each user and identifies deviations in real time. When an anomaly is detected, the user receives an alert and can approve autonomous threat neutralization (process termination, network blocking, app quarantine).
 
+## Quick Setup Docs
+
+- Full stack (local + Android): [SETUP_GUIDE.md](SETUP_GUIDE.md)
+- Simple setup + daily startup: [SIMPLE_SETUP_STARTUP.md](SIMPLE_SETUP_STARTUP.md)
+- Raspberry Pi edge server only: [EDGE_SERVER_RASPBERRY_PI_SETUP.md](EDGE_SERVER_RASPBERRY_PI_SETUP.md)
+
 ## ✨ Key Features
 
 | Feature | Description |
@@ -24,8 +30,8 @@ Unlike traditional antivirus solutions that rely on signature databases, this sy
 ## 🧱 System Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ANDROID DEVICE                                    │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                           ANDROID DEVICE                                   │
 │  ┌────────────────┐   ┌────────────────┐   ┌────────────────────────────┐  │
 │  │ Foreground     │   │ Accessibility  │   │ Room Database              │  │
 │  │ Service        │   │ Service        │   │ (Behavior events, alerts)  │  │
@@ -34,34 +40,34 @@ Unlike traditional antivirus solutions that rely on signature databases, this sy
 │           │           └────────┬───────┘                 │                 │
 │           └────────────────────┼─────────────────────────┘                 │
 │                                │                                           │
-│                        ┌───────▼───────┐                                   │
-│                        │ WebSocket     │                                   │
+│                        ┌───────▼────────┐                                  │
+│                        │ WebSocket      │                                  │
 │                        │ Client (OkHttp)│                                  │
-│                        └───────┬───────┘                                   │
+│                        └───────┬────────┘                                  │
 └────────────────────────────────┼───────────────────────────────────────────┘
                                  │ NGROK TLS 1.3
 ┌────────────────────────────────▼───────────────────────────────────────────┐
 │                    EDGE SERVER (Raspberry Pi 4/5)                          │
-│  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │                    LOG INGESTION (FastAPI)                          │  │
-│  │  WebSocket endpoint → Redis buffer → PostgreSQL (30‑day retention) │  │
-│  └─────────────────────────────────────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    LOG INGESTION (FastAPI)                          │   │
+│  │  WebSocket endpoint → Redis buffer → PostgreSQL (30‑day retention)  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                 │                                          │
-│  ┌──────────────────────────────▼──────────────────────────────────────┐  │
-│  │                    BEHAVIORAL PATTERN LEARNING ENGINE               │  │
-│  │  • Feature extraction (72‑dim vector)                               │  │
-│  │  • Online baseline update (EMA with drift detection)                │  │
-│  │  • Mahalanobis distance & adaptive threshold                        │  │
-│  │  • Anomaly classification (4 types)                                 │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────▼──────────────────────────────────────┐   │
+│  │                    BEHAVIORAL PATTERN LEARNING ENGINE               │   │
+│  │  • Feature extraction (72‑dim vector)                               │   │
+│  │  • Online baseline update (EMA with drift detection)                │   │
+│  │  • Mahalanobis distance & adaptive threshold                        │   │
+│  │  • Anomaly classification (4 types)                                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                 │                                          │
-│  ┌──────────────────────────────▼──────────────────────────────────────┐  │
-│  │                    RESPONSE & DASHBOARD                             │  │
-│  │  • Alert manager (FCM push, SMS, email)                             │  │
-│  │  • Flask dashboard with real‑time logs                              │  │
-│  │  • Action executor (via ADB / root)                                 │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+│  ┌──────────────────────────────▼──────────────────────────────────────┐   │
+│  │                    RESPONSE & DASHBOARD                             │   │
+│  │  • Alert manager (FCM push, SMS, email)                             │   │
+│  │  • Flask dashboard with real‑time logs                              │   │
+│  │  • Action executor (via ADB / root)                                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🛠️ Technology Stack

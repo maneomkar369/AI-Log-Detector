@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Anomaly Detector</string>
+    <string name="app_name">BAD</string>
+    <string name="app_subtitle">Behavioral Log Anomaly Detector</string>
 </resources>

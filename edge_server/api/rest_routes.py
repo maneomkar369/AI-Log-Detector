@@ -5,12 +5,14 @@ HTTP endpoints for the dashboard and external integrations.
 """
 
 import json
-from typing import List
+import logging
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from config import settings
 from models.database import get_db
 from models.alert import Alert
 from models.device import Device
@@ -18,9 +20,56 @@ from services.alert_manager import AlertManager
 from services.action_executor import ActionExecutor
 
 router = APIRouter(prefix="/api", tags=["API"])
+logger = logging.getLogger(__name__)
 
 alert_manager = AlertManager()
 action_executor = ActionExecutor()
+
+
+def _parse_actions(raw_actions: str | None) -> list:
+    if not raw_actions:
+        return []
+    try:
+        parsed = json.loads(raw_actions)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _serialize_alert(alert: Alert) -> Dict[str, Any]:
+    return {
+        "type": "alert",
+        "anomalyId": alert.anomaly_id,
+        "anomaly_id": alert.anomaly_id,
+        "deviceId": alert.device_id,
+        "device_id": alert.device_id,
+        "severity": alert.severity,
+        "threatType": alert.threat_type,
+        "threat_type": alert.threat_type,
+        "message": alert.message,
+        "confidence": alert.confidence,
+        "mahalanobisDistance": alert.mahalanobis_distance,
+        "actions": _parse_actions(alert.actions),
+        "status": alert.status,
+        "createdAt": alert.created_at.isoformat() if alert.created_at else None,
+        "respondedAt": alert.responded_at.isoformat() if alert.responded_at else None,
+    }
+
+
+async def _publish_alert_update(alert: Alert) -> None:
+    payload = {
+        **_serialize_alert(alert),
+        "updateType": "status",
+    }
+
+    try:
+        import redis.asyncio as aioredis
+
+        redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+        await redis_client.publish("alerts", json.dumps(payload))
+        await redis_client.close()
+    except Exception as exc:
+        logger.warning("Failed to publish dashboard alert update for %s: %s", alert.anomaly_id, exc)
 
 
 # ────────────────── Alert Endpoints ──────────────────
@@ -33,21 +82,7 @@ async def get_device_alerts(
 ):
     """List recent alerts for a device."""
     alerts = await alert_manager.get_device_alerts(db, device_id, limit)
-    return [
-        {
-            "anomalyId": a.anomaly_id,
-            "severity": a.severity,
-            "threatType": a.threat_type,
-            "message": a.message,
-            "confidence": a.confidence,
-            "mahalanobisDistance": a.mahalanobis_distance,
-            "actions": json.loads(a.actions) if a.actions else [],
-            "status": a.status,
-            "createdAt": a.created_at.isoformat() if a.created_at else None,
-            "respondedAt": a.responded_at.isoformat() if a.responded_at else None,
-        }
-        for a in alerts
-    ]
+    return [_serialize_alert(alert) for alert in alerts]
 
 
 @router.post("/alerts/{alert_id}/approve")
@@ -61,14 +96,15 @@ async def approve_alert(
         raise HTTPException(404, f"Alert {alert_id} not found")
 
     # Execute approved actions
-    actions = json.loads(alert.actions) if alert.actions else []
+    actions = _parse_actions(alert.actions)
     results = await action_executor.execute_all_actions(
         actions=actions,
         device_id=alert.device_id,
     )
-    alert.action_executed = True
+    alert.action_executed = bool(results)
     alert.action_result = json.dumps(results)
     await db.commit()
+    await _publish_alert_update(alert)
 
     return {
         "status": "approved",
@@ -87,6 +123,7 @@ async def deny_alert(
     if not alert:
         raise HTTPException(404, f"Alert {alert_id} not found")
     await db.commit()
+    await _publish_alert_update(alert)
     return {"status": "denied", "anomalyId": alert.anomaly_id}
 
 
