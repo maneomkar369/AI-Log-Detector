@@ -3,23 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Anomaly Detector{% endblock %} — Dashboard</title>
+    <title>{% block title %}Anomaly Detector{% endblock %} - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
     <nav class="navbar">
         <div class="nav-brand">
-            <span class="nav-icon">🛡️</span>
             <span class="nav-title">Behavioral Anomaly Detector</span>
+            <span class="nav-subtitle">Android Monitoring Console</span>
         </div>
         <div class="nav-links">
-            <a href="/" class="nav-link {% block nav_logs %}{% endblock %}">📋 Live Logs</a>
-            <a href="/alerts" class="nav-link {% block nav_alerts %}{% endblock %}">🚨 Alerts</a>
+            <a href="#dashboard" class="nav-link">Dashboard</a>
+            <a href="#live-logs" class="nav-link">Live Logs</a>
+            <a href="#adb-config" class="nav-link">ADB Config</a>
+            <a href="#profiles" class="nav-link">Profiles</a>
+            <a href="#settings" class="nav-link">Settings</a>
         </div>
         <div class="nav-status">
-            <span id="connection-status" class="status-dot offline"></span>
-            <span id="connection-text">Connecting...</span>
+            <span id="socket-status-dot" class="status-dot offline"></span>
+            <span id="socket-status-text">Socket connecting...</span>
         </div>
     </nav>
 

@@ -4,114 +4,1010 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0E17"
-    android:padding="16dp">
+    android:background="@drawable/bg_mirror_surface"
+    android:paddingStart="20dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="16dp">
 
-    <!-- Status Bar -->
     <LinearLayout
-        android:id="@+id/statusBar"
+        android:id="@+id/headerBar"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_height="64dp"
+        android:background="@drawable/bg_header_bar"
+        android:elevation="4dp"
         android:gravity="center_vertical"
-        android:padding="12dp"
-        android:background="@drawable/card_bg"
-        app:layout_constraintTop_toTopOf="parent"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
-        <View
-            android:id="@+id/statusDot"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@android:drawable/presence_offline" />
-
-        <TextView
-            android:id="@+id/textConnectionStatus"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Disconnected"
-            android:textColor="#94A3B8"
-            android:textSize="14sp" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/textSyncStatus"
+            <TextView
+                android:id="@+id/textHeaderBrand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_bold"
+                android:text="BAD"
+                android:textColor="@color/header_brand_text"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/textHeaderSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/inter_regular"
+                android:text="Behavioral Anomaly Detection"
+                android:textColor="@color/header_subtitle_text"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pending sync: 0"
-            android:textColor="#64748B"
-            android:textSize="12sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/headerStatusDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/bg_status_dot" />
+
+            <TextView
+                android:id="@+id/textHeaderStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/inter_medium"
+                android:text="Live"
+                android:textColor="@color/header_status_live"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Toggle Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnToggle"
-        android:layout_width="0dp"
-        android:layout_height="56dp"
-        android:layout_marginTop="16dp"
-        android:text="▶ Start Monitoring"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        app:backgroundTint="#3B82F6"
-        app:cornerRadius="12dp"
-        app:layout_constraintTop_toBottomOf="@id/statusBar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Alert Count -->
-    <LinearLayout
-        android:id="@+id/alertHeader"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/btnToggle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🚨 Alerts"
-            android:textColor="#E2E8F0"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/textAlertCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0 alerts"
-            android:textColor="#64748B"
-            android:textSize="13sp" />
-    </LinearLayout>
-
-    <!-- Alert List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerAlerts"
+    <FrameLayout
+        android:id="@+id/pageHost"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/alertHeader"
-        app:layout_constraintBottom_toTopOf="@id/btnSettings"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintBottom_toTopOf="@+id/tabsRow"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/headerBar">
 
-    <!-- Settings Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSettings"
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="28dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_alert_panel"
+                    android:elevation="6dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <View
+                        android:layout_width="54dp"
+                        android:layout_height="4dp"
+                        android:background="#DB2F3F" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_alert_warning"
+                            app:tint="#D84A32" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter_bold"
+                            android:text="Recent Alerts"
+                            android:textColor="#111111"
+                            android:textSize="24sp" />
+
+                        <TextView
+                            android:id="@+id/textAlertCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_mirror_chip_unselected"
+                            android:fontFamily="@font/inter_medium"
+                            android:paddingStart="10dp"
+                            android:paddingTop="5dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="5dp"
+                            android:text="0 alerts"
+                            android:textColor="#26457F"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="Critical, warning, and normal detections in one live feed."
+                        android:textColor="#5A6A85"
+                        android:textSize="11sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerAlerts"
+                        android:layout_width="match_parent"
+                        android:layout_height="344dp"
+                        android:layout_marginTop="12dp"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="true"
+                        android:paddingBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/inter_medium"
+                        android:text="Scroll to view all alerts"
+                        android:textColor="#5E749D"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal"
+                    android:weightSum="3">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mirror_card"
+                        android:elevation="3dp"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_legend_dot"
+                                android:backgroundTint="#1457F2" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:fontFamily="@font/inter_medium"
+                                android:text="Total"
+                                android:textColor="#4D5D78"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textTotalAlerts"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/inter_bold"
+                            android:text="0"
+                            android:textColor="#111111"
+                            android:textSize="30sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mirror_card"
+                        android:elevation="3dp"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_legend_dot"
+                                android:backgroundTint="#F57C00" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:fontFamily="@font/inter_medium"
+                                android:text="Pending"
+                                android:textColor="#4D5D78"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textPendingAlerts"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/inter_bold"
+                            android:text="0"
+                            android:textColor="#111111"
+                            android:textSize="30sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mirror_card"
+                        android:elevation="3dp"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_legend_dot"
+                                android:backgroundTint="#22C55E" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:fontFamily="@font/inter_medium"
+                                android:text="Approved"
+                                android:textColor="#4D5D78"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textApprovedAlerts"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/inter_bold"
+                            android:text="0"
+                            android:textColor="#111111"
+                            android:textSize="30sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="Trend Intelligence"
+                        android:textColor="#111111"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:id="@+id/textTrendSummary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/inter_medium"
+                        android:text="7-day total: 0 · peak/day: 0"
+                        android:textColor="#374B70"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/textTrendInsight"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="No anomalies detected this week"
+                        android:textColor="#1B56DA"
+                        android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="184dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_trend_block"
+                        android:gravity="center"
+                        android:padding="12dp">
+
+                        <com.anomalydetector.ui.MirrorTrendChartView
+                            android:id="@+id/trendAlertDistribution"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:weightSum="2.1">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="160dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1.1"
+                            android:background="@drawable/bg_trend_block"
+                            android:gravity="center"
+                            android:padding="12dp">
+
+                            <com.anomalydetector.ui.MirrorPieChartView
+                                android:id="@+id/pieAlertDistribution"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="160dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_trend_block"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter_semibold"
+                                android:text="Severity Mix"
+                                android:textColor="#111111"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="8dp"
+                                    android:layout_height="8dp"
+                                    android:background="@drawable/bg_legend_dot"
+                                    android:backgroundTint="#D90429" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/inter_medium"
+                                    android:text="Critical"
+                                    android:textColor="#273958"
+                                    android:textSize="13sp" />
+
+                                <TextView
+                                    android:id="@+id/textCriticalSlice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/inter_semibold"
+                                    android:text="0"
+                                    android:textColor="#111111"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="8dp"
+                                    android:layout_height="8dp"
+                                    android:background="@drawable/bg_legend_dot"
+                                    android:backgroundTint="#F57C00" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/inter_medium"
+                                    android:text="High"
+                                    android:textColor="#273958"
+                                    android:textSize="13sp" />
+
+                                <TextView
+                                    android:id="@+id/textHighSlice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/inter_semibold"
+                                    android:text="0"
+                                    android:textColor="#111111"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="8dp"
+                                    android:layout_height="8dp"
+                                    android:background="@drawable/bg_legend_dot"
+                                    android:backgroundTint="#2563EB" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/inter_medium"
+                                    android:text="Medium"
+                                    android:textColor="#273958"
+                                    android:textSize="13sp" />
+
+                                <TextView
+                                    android:id="@+id/textMediumSlice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/inter_semibold"
+                                    android:text="0"
+                                    android:textColor="#111111"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Monitoring Controls"
+                        android:textColor="#111111"
+                        android:textSize="17sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="12dp"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Start Monitoring"
+                        android:textAllCaps="false"
+                        android:textColor="@color/action_button_text"
+                        android:textSize="15sp"
+                        app:backgroundTint="@color/action_button_bg" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnVpnFlow"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_mirror_chip_unselected"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Start VPN Flow Monitor"
+                        android:textAllCaps="false"
+                        android:textColor="#2D436F"
+                        android:textSize="15sp"
+                        app:backgroundTint="@android:color/transparent" />
+
+                    <TextView
+                        android:id="@+id/textVpnStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="VPN flow: inactive"
+                        android:textColor="#536785"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageProfiles"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Monitoring Profiles"
+                    android:textColor="#111D3D"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:id="@+id/textActiveProfile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter_medium"
+                    android:text="Active profile: Development"
+                    android:textColor="#6077A2"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:id="@+id/cardProfileDev"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_mirror_card_active"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Development"
+                        android:textColor="#14254B"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="Balanced telemetry, rich diagnostics, medium-threshold alerts."
+                        android:textColor="#5A7099"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardProfileSecurity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="2dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Security Audit"
+                        android:textColor="#14254B"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="High-sensitivity policy with aggressive auth and package checks."
+                        android:textColor="#5A7099"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardProfilePerformance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="2dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Performance"
+                        android:textColor="#14254B"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="Lower overhead profile focused on core network and memory anomalies."
+                        android:textColor="#5A7099"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardProfileQa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="2dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Production QA"
+                        android:textColor="#14254B"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/inter_regular"
+                        android:text="Release-ready checks with stable thresholds and traceability."
+                        android:textColor="#5A7099"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <LinearLayout
+            android:id="@+id/pageConfig"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="22dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="Runtime Config"
+                        android:textColor="#111D3D"
+                        android:textSize="24sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_mirror_card"
+                        android:elevation="3dp"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="Log Buffer"
+                            android:textColor="#536891"
+                            android:textSize="13sp" />
+
+                        <Spinner
+                            android:id="@+id/spinnerConfigBuffer"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_mirror_input"
+                            android:popupBackground="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="Sampling Interval"
+                            android:textColor="#536891"
+                            android:textSize="13sp" />
+
+                        <Spinner
+                            android:id="@+id/spinnerConfigSampling"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_mirror_input"
+                            android:popupBackground="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="Package Filter"
+                            android:textColor="#536891"
+                            android:textSize="13sp" />
+
+                        <EditText
+                            android:id="@+id/editConfigPackageFilter"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_mirror_input"
+                            android:fontFamily="@font/inter_regular"
+                            android:hint="com.example.app"
+                            android:inputType="text"
+                            android:paddingHorizontal="14dp"
+                            android:textColor="#1F3158"
+                            android:textColorHint="#8EA0C2" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchConfigCrash"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="Crash detection"
+                            android:textColor="#26406D" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchConfigMl"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="ML scoring"
+                            android:textColor="#26406D" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchConfigSqlite"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="SQLite logging"
+                            android:textColor="#26406D" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchConfigPush"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter_medium"
+                            android:text="Push notifications"
+                            android:textColor="#26406D" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="12dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSaveConfig"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:fontFamily="@font/inter_semibold"
+                    android:text="Save Config"
+                    android:textAllCaps="false"
+                    android:textColor="@color/action_button_text"
+                    android:textSize="16sp"
+                    app:backgroundTint="@color/action_button_bg" />
+
+                <TextView
+                    android:id="@+id/textConfigSaved"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/inter_regular"
+                    android:text=""
+                    android:textColor="#677CA5"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageSettings"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Advanced Settings"
+                    android:textColor="#111D3D"
+                    android:textSize="24sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_mirror_card"
+                    android:elevation="3dp"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_regular"
+                        android:lineSpacingExtra="3dp"
+                        android:text="Open the full settings page to control endpoint routing, intervals, reconnection behavior, and runtime policy toggles."
+                        android:textColor="#5E749D"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSettings"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_mirror_chip_unselected"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Open Full Settings"
+                        android:textAllCaps="false"
+                        android:textColor="#2E436E"
+                        android:textSize="15sp"
+                        app:backgroundTint="@android:color/transparent" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/tabsRow"
         android:layout_width="0dp"
-        android:layout_height="48dp"
-        android:text="⚙️ Settings"
-        android:textColor="#94A3B8"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        app:cornerRadius="12dp"
+        android:layout_height="66dp"
+        android:background="@drawable/bg_mirror_nav_glass"
+        android:elevation="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="5dp"
+        android:weightSum="4"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tabDashboard"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_tab_active"
+            android:drawableTop="@drawable/ic_nav_dashboard"
+            android:drawableTint="#FFFFFF"
+            android:drawablePadding="2dp"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="Dashboard"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/tabProfiles"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_tab_inactive"
+            android:drawableTop="@drawable/ic_nav_profile"
+            android:drawableTint="#6B7B99"
+            android:drawablePadding="2dp"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="Profile"
+            android:textColor="#6B7B99"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/tabConfig"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_tab_inactive"
+            android:drawableTop="@drawable/ic_nav_config"
+            android:drawableTint="#6B7B99"
+            android:drawablePadding="2dp"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="Config"
+            android:textColor="#6B7B99"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/tabSettings"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_nav_tab_inactive"
+            android:drawableTop="@drawable/ic_nav_settings"
+            android:drawableTint="#6B7B99"
+            android:drawablePadding="2dp"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="Settings"
+            android:textColor="#6B7B99"
+            android:textSize="10sp" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

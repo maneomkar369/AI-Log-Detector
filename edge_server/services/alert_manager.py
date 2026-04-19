@@ -9,12 +9,11 @@ import json
 import uuid
 import logging
 from datetime import datetime
-from typing import Optional, List
+from typing import Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.alert import Alert
-from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +41,8 @@ class AlertManager:
         message: str,
         confidence: float,
         mahalanobis_distance: float = 0.0,
+        target_package: Optional[str] = None,
+        target_uid: Optional[int] = None,
     ) -> Alert:
         """
         Create a new Alert object (not yet persisted).
@@ -61,13 +62,19 @@ class AlertManager:
         """
         # Determine recommended actions based on severity
         if severity <= 3:
-            actions = self.SEVERITY_ACTIONS["low"]
+            action_names = self.SEVERITY_ACTIONS["low"]
         elif severity <= 6:
-            actions = self.SEVERITY_ACTIONS["medium"]
+            action_names = self.SEVERITY_ACTIONS["medium"]
         elif severity <= 8:
-            actions = self.SEVERITY_ACTIONS["high"]
+            action_names = self.SEVERITY_ACTIONS["high"]
         else:
-            actions = self.SEVERITY_ACTIONS["critical"]
+            action_names = self.SEVERITY_ACTIONS["critical"]
+
+        actions = self._build_action_plan(
+            action_names=action_names,
+            target_package=target_package,
+            target_uid=target_uid,
+        )
 
         alert = Alert(
             anomaly_id=f"alt_{uuid.uuid4().hex[:8]}",
@@ -99,12 +106,45 @@ class AlertManager:
         return json.dumps({
             "type": "alert",
             "anomalyId": alert.anomaly_id,
+            "anomaly_id": alert.anomaly_id,
+            "deviceId": alert.device_id,
+            "device_id": alert.device_id,
             "severity": alert.severity,
             "threatType": alert.threat_type,
+            "threat_type": alert.threat_type,
             "message": alert.message,
             "confidence": alert.confidence,
             "actions": json.loads(alert.actions) if alert.actions else [],
+            "status": alert.status,
+            "createdAt": alert.created_at.isoformat() if alert.created_at else None,
+            "respondedAt": alert.responded_at.isoformat() if alert.responded_at else None,
         })
+
+    @staticmethod
+    def _build_action_plan(
+        action_names: List[str],
+        target_package: Optional[str],
+        target_uid: Optional[int],
+    ) -> List[dict[str, Any]]:
+        """Build an action plan with per-action target metadata when available."""
+        plan: List[dict[str, Any]] = []
+
+        for action_name in action_names:
+            item: dict[str, Any] = {"name": action_name}
+
+            if action_name in {"kill_process", "quarantine_app"}:
+                if not target_package:
+                    continue
+                item["targetPackage"] = target_package
+
+            if action_name == "block_network":
+                if target_uid is None:
+                    continue
+                item["targetUid"] = int(target_uid)
+
+            plan.append(item)
+
+        return plan
 
     async def approve_alert(
         self, db: AsyncSession, alert_id: str

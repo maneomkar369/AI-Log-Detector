@@ -1,33 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Alerts{% endblock %}
-{% block nav_alerts %}active{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>🚨 Anomaly Alerts</h1>
-    <div class="header-controls">
-        <span id="alert-count" class="badge badge-danger">0 alerts</span>
-        <select id="filter-severity" class="input-filter" onchange="filterAlerts()">
-            <option value="">All severities</option>
-            <option value="critical">🔴 Critical (9-10)</option>
-            <option value="high">🟠 High (7-8)</option>
-            <option value="medium">🟡 Medium (4-6)</option>
-            <option value="low">🟢 Low (1-3)</option>
-        </select>
+<div class="glass-card section-card">
+    <div class="section-head">
+        <div>
+            <h1>Alerts</h1>
+            <p class="section-subtitle">Alert controls are now integrated in the unified monitoring console.</p>
+        </div>
     </div>
-</div>
 
-<div class="alerts-container" id="alerts-container">
-    <div class="log-placeholder">
-        <span class="placeholder-icon">✅</span>
-        <p>No alerts yet</p>
-        <p class="placeholder-sub">Anomaly alerts will appear here when detected.</p>
-    </div>
+    <article class="glass-panel">
+        <p class="muted">Open the <a class="inline-link" href="/">Dashboard</a> to view metrics, trends, live logs, ADB controls, profiles, and settings in one interface.</p>
+    </article>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    initAlertViewer();
-</script>
 {% endblock %}

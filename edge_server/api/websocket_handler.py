@@ -9,7 +9,7 @@ the analysis pipeline.
 import json
 import logging
 from datetime import datetime
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect
@@ -34,17 +34,21 @@ class ConnectionManager:
     """
 
     def __init__(self, redis_buffer: RedisBuffer):
-        self.active_connections: Dict[str, WebSocket] = {}
+        self.active_connections: Dict[str, List[WebSocket]] = {}
         self.redis = redis_buffer
         self.feature_extractor = FeatureExtractor()
         self.anomaly_detector = AnomalyDetector()
         self.baseline_manager = BaselineManager()
         self.alert_manager = AlertManager()
 
+    def _socket_count(self) -> int:
+        return sum(len(sockets) for sockets in self.active_connections.values())
+
     async def connect(self, device_id: str, websocket: WebSocket) -> None:
         """Accept a new device connection."""
         await websocket.accept()
-        self.active_connections[device_id] = websocket
+        device_sockets = self.active_connections.setdefault(device_id, [])
+        device_sockets.append(websocket)
 
         # Ensure device record exists
         async with async_session() as db:
@@ -60,26 +64,51 @@ class ConnectionManager:
             device.is_active = True
             await db.commit()
 
-        logger.info("Device connected: %s (total: %d)",
-                     device_id, len(self.active_connections))
+        logger.info(
+            "Device connected: %s (devices=%d sockets=%d)",
+            device_id,
+            len(self.active_connections),
+            self._socket_count(),
+        )
 
-    def disconnect(self, device_id: str) -> None:
-        """Remove a disconnected device."""
-        self.active_connections.pop(device_id, None)
-        logger.info("Device disconnected: %s (remaining: %d)",
-                     device_id, len(self.active_connections))
+    def disconnect(self, device_id: str, websocket: Optional[WebSocket] = None) -> None:
+        """Remove a disconnected socket (or all sockets for a device)."""
+        device_sockets = self.active_connections.get(device_id)
+        if not device_sockets:
+            return
+
+        if websocket is None:
+            self.active_connections.pop(device_id, None)
+        else:
+            try:
+                device_sockets.remove(websocket)
+            except ValueError:
+                pass
+
+            if not device_sockets:
+                self.active_connections.pop(device_id, None)
+
+        logger.info(
+            "Device disconnected: %s (devices=%d sockets=%d)",
+            device_id,
+            len(self.active_connections),
+            self._socket_count(),
+        )
 
     async def send_to_device(self, device_id: str, message: str) -> bool:
         """Send a message to a specific device."""
-        ws = self.active_connections.get(device_id)
-        if ws:
+        sockets = list(self.active_connections.get(device_id, []))
+        delivered = False
+
+        for ws in sockets:
             try:
                 await ws.send_text(message)
-                return True
+                delivered = True
             except Exception as e:
                 logger.error("Send to %s failed: %s", device_id, e)
-                self.disconnect(device_id)
-        return False
+                self.disconnect(device_id, ws)
+
+        return delivered
 
     async def handle_message(self, device_id: str, raw_data: str) -> None:
         """
@@ -172,6 +201,8 @@ class ConnectionManager:
                 cusum_pos=device.cusum_pos,
                 cusum_neg=device.cusum_neg,
             )
+            rule_alert = self._evaluate_rule_alert(events)
+            is_suspicious_window = detection.is_anomaly or rule_alert is not None
 
             # Update CUSUM
             new_pos, new_neg, drift = self.baseline_manager.update_cusum(
@@ -190,8 +221,19 @@ class ConnectionManager:
             device.distance_std = new_d_std
 
             # Update baseline (only if safe)
-            if not detection.is_anomaly or self.baseline_manager.should_update_after_anomaly(
-                detection.threat_type.value, detection.severity
+            active_threat_type = (
+                detection.threat_type.value
+                if detection.is_anomaly
+                else (rule_alert["threat_type"] if rule_alert else "NONE")
+            )
+            active_severity = (
+                detection.severity
+                if detection.is_anomaly
+                else (rule_alert["severity"] if rule_alert else 0)
+            )
+
+            if (not is_suspicious_window) or self.baseline_manager.should_update_after_anomaly(
+                active_threat_type, active_severity
             ):
                 new_mean, new_cov = self.baseline_manager.update_baseline(
                     baseline_mean, baseline_cov,
@@ -204,15 +246,43 @@ class ConnectionManager:
             device.last_seen = datetime.utcnow()
             await db.commit()
 
-            # Create alert if anomaly detected
-            if detection.is_anomaly:
+            # Create alert if model anomaly or rule trigger is present
+            if is_suspicious_window:
+                alert_severity = detection.severity
+                alert_threat_type = detection.threat_type.value
+                alert_message = detection.message
+                alert_confidence = detection.confidence
+                alert_distance = detection.mahalanobis_distance
+                alert_source = "model"
+                action_targets = self._extract_action_targets(events)
+
+                if not detection.is_anomaly and rule_alert:
+                    alert_severity = int(rule_alert["severity"])
+                    alert_threat_type = str(rule_alert["threat_type"])
+                    alert_message = str(rule_alert["message"])
+                    alert_confidence = float(rule_alert["confidence"])
+                    alert_distance = 0.0
+                    alert_source = "rule"
+                elif detection.is_anomaly and rule_alert:
+                    if int(rule_alert["severity"]) > alert_severity:
+                        alert_severity = int(rule_alert["severity"])
+                        alert_threat_type = str(rule_alert["threat_type"])
+                        alert_message = str(rule_alert["message"])
+                        alert_confidence = max(alert_confidence, float(rule_alert["confidence"]))
+                    else:
+                        alert_message = f"{alert_message} | {rule_alert['message']}"
+                        alert_confidence = max(alert_confidence, float(rule_alert["confidence"]))
+                    alert_source = "model+rule"
+
                 alert = self.alert_manager.create_alert(
                     device_id=device_id,
-                    severity=detection.severity,
-                    threat_type=detection.threat_type.value,
-                    message=detection.message,
-                    confidence=detection.confidence,
-                    mahalanobis_distance=detection.mahalanobis_distance,
+                    severity=alert_severity,
+                    threat_type=alert_threat_type,
+                    message=alert_message,
+                    confidence=alert_confidence,
+                    mahalanobis_distance=alert_distance,
+                    target_package=action_targets.get("target_package"),
+                    target_uid=action_targets.get("target_uid"),
                 )
                 async with async_session() as alert_db:
                     await self.alert_manager.save_alert(alert_db, alert)
@@ -220,16 +290,178 @@ class ConnectionManager:
 
                 # Push alert to device via WebSocket
                 alert_msg = self.alert_manager.alert_to_ws_message(alert)
-                await self.send_to_device(device_id, alert_msg)
+                delivered = await self.send_to_device(device_id, alert_msg)
+                if not delivered:
+                    logger.warning("Alert %s could not be delivered to any active socket", alert.anomaly_id)
 
                 # Publish to dashboard
                 await self.redis.publish_alert(json.loads(alert_msg))
 
                 logger.warning(
-                    "ANOMALY: device=%s type=%s severity=%d confidence=%.2f",
-                    device_id, detection.threat_type.value,
-                    detection.severity, detection.confidence,
+                    "ALERT: device=%s source=%s type=%s severity=%d confidence=%.2f",
+                    device_id, alert_source, alert_threat_type,
+                    alert_severity, alert_confidence,
                 )
+
+    @staticmethod
+    def _parse_event_data(event: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse event payload into a dictionary."""
+        data = event.get("data", {})
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, str):
+            try:
+                parsed = json.loads(data)
+                return parsed if isinstance(parsed, dict) else {}
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        """Safely convert arbitrary values to float."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _extract_action_targets(events: list) -> Dict[str, Optional[Any]]:
+        """Infer likely action targets from event content in the current window."""
+        package_counts: Dict[str, int] = {}
+        uid_scores: Dict[int, float] = {}
+
+        for ev in events:
+            data = ConnectionManager._parse_event_data(ev)
+            event_type = str(ev.get("event_type", "")).upper()
+
+            package_candidates = [
+                ev.get("package_name"),
+                data.get("package"),
+                data.get("packageName"),
+                data.get("targetPackage"),
+                data.get("processName"),
+            ]
+            for candidate in package_candidates:
+                if not isinstance(candidate, str):
+                    continue
+                package_name = candidate.strip()
+                if not package_name:
+                    continue
+                package_counts[package_name] = package_counts.get(package_name, 0) + 1
+
+            if event_type == "NETWORK_APP":
+                uid_value = data.get("uid")
+                try:
+                    uid = int(uid_value)
+                except (TypeError, ValueError):
+                    uid = None
+
+                if uid is not None and uid >= 0:
+                    rx = ConnectionManager._safe_float(data.get("rxBytesDelta"), default=0.0)
+                    tx = ConnectionManager._safe_float(data.get("txBytesDelta"), default=0.0)
+                    score = max(0.0, rx) + max(0.0, tx)
+                    uid_scores[uid] = uid_scores.get(uid, 0.0) + (score if score > 0 else 1.0)
+
+        target_package = None
+        if package_counts:
+            target_package = max(package_counts.items(), key=lambda kv: kv[1])[0]
+
+        target_uid = None
+        if uid_scores:
+            target_uid = max(uid_scores.items(), key=lambda kv: kv[1])[0]
+
+        return {
+            "target_package": target_package,
+            "target_uid": target_uid,
+        }
+
+    @staticmethod
+    def _evaluate_rule_alert(events: list) -> Optional[Dict[str, Any]]:
+        """
+        Rule-based alerting for security/system/network conditions.
+
+        Returns an alert payload or None when no rule matches.
+        """
+        package_events = 0
+        auth_events = 0
+        low_memory_events = 0
+        battery_critical_events = 0
+        network_flow_events = 0
+        total_network_bytes = 0.0
+
+        for ev in events:
+            etype = str(ev.get("event_type", "")).upper()
+            data = ConnectionManager._parse_event_data(ev)
+
+            if etype == "SECURITY_PACKAGE_EVENT":
+                package_events += 1
+            elif etype == "SECURITY_AUTH_EVENT":
+                auth_events += 1
+            elif etype == "SYSTEM_STATE":
+                if bool(data.get("lowMemory", False)):
+                    low_memory_events += 1
+                battery_pct = ConnectionManager._safe_float(data.get("batteryPct"), default=-1.0)
+                if 0 <= battery_pct <= 10:
+                    battery_critical_events += 1
+
+            if etype in ("NETWORK_TRAFFIC", "NETWORK_APP"):
+                rx = ConnectionManager._safe_float(data.get("rxBytesDelta"), default=0.0)
+                tx = ConnectionManager._safe_float(data.get("txBytesDelta"), default=0.0)
+                total_network_bytes += max(0.0, rx) + max(0.0, tx)
+                network_flow_events += 1
+            elif etype == "NETWORK_FLOW":
+                total_network_bytes += max(0.0, ConnectionManager._safe_float(data.get("bytes"), default=0.0))
+                network_flow_events += 1
+
+        total_network_mb = total_network_bytes / (1024.0 * 1024.0)
+
+        # Keep highest severity rule when multiple rules match.
+        rule_alert: Optional[Dict[str, Any]] = None
+
+        if package_events >= 2:
+            severity = min(9, 6 + package_events)
+            rule_alert = {
+                "severity": severity,
+                "threat_type": "INSIDER_THREAT",
+                "message": f"{package_events} app package modifications detected in one analysis window",
+                "confidence": min(0.7 + package_events * 0.05, 0.95),
+            }
+
+        if auth_events >= 15:
+            candidate = {
+                "severity": 7,
+                "threat_type": "INSIDER_THREAT",
+                "message": f"Unusual authentication/screen churn detected ({auth_events} events)",
+                "confidence": 0.8,
+            }
+            if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                rule_alert = candidate
+
+        if total_network_mb >= 25.0 and (low_memory_events > 0 or battery_critical_events > 0):
+            candidate = {
+                "severity": 8,
+                "threat_type": "DEVICE_MISUSE",
+                "message": (
+                    f"High network burst ({total_network_mb:.1f} MB) during system stress "
+                    f"(low_memory={low_memory_events}, battery_critical={battery_critical_events})"
+                ),
+                "confidence": 0.85,
+            }
+            if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                rule_alert = candidate
+
+        if network_flow_events >= 30 and total_network_mb >= 10.0:
+            candidate = {
+                "severity": 7,
+                "threat_type": "DEVICE_MISUSE",
+                "message": f"Dense network flow burst detected ({network_flow_events} flow events)",
+                "confidence": 0.8,
+            }
+            if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                rule_alert = candidate
+
+        return rule_alert
 
     async def _accumulate_sample(
         self, device: Device, vector: np.ndarray, db

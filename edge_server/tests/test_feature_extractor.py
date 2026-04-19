@@ -105,3 +105,44 @@ def test_extract_values_are_finite(extractor, sample_events):
     """All feature values must be finite (no NaN or Inf)."""
     vector = extractor.extract(sample_events)
     assert np.all(np.isfinite(vector))
+
+
+def test_extract_includes_network_security_system_signals(extractor):
+    """Combined features should reflect network/security/system event categories."""
+    events = [
+        {
+            "event_type": "NETWORK_TRAFFIC",
+            "timestamp": 1700000000000,
+            "data": '{"rxBytesDelta": 1048576, "txBytesDelta": 524288}',
+        },
+        {
+            "event_type": "NETWORK_APP",
+            "package_name": "com.chrome",
+            "timestamp": 1700000005000,
+            "data": '{"uid": 10123, "rxBytesDelta": 2048, "txBytesDelta": 4096}',
+        },
+        {
+            "event_type": "SECURITY_AUTH_EVENT",
+            "timestamp": 1700000010000,
+            "data": '{"event": "USER_PRESENT"}',
+        },
+        {
+            "event_type": "SYSTEM_STATE",
+            "timestamp": 1700000015000,
+            "data": '{"lowMemory": true, "batteryPct": 12}',
+        },
+        {
+            "event_type": "SYSTEM_LOGCAT_ACCESS",
+            "timestamp": 1700000020000,
+            "data": '{"status": "restricted"}',
+        },
+    ]
+
+    vector = extractor.extract(events)
+    combined = vector[67:72]
+
+    # combined[2] = network signal, combined[3] = security ratio,
+    # combined[4] = burst/system signal
+    assert combined[2] > 0.0
+    assert combined[3] > 0.0
+    assert combined[4] > 0.0

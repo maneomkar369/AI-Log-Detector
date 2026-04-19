@@ -25,12 +25,26 @@ class MainViewModel @Inject constructor(
     private val _connectionStatus = MutableLiveData("Disconnected")
     val connectionStatus: LiveData<String> = _connectionStatus
 
+    private val _isVpnActive = MutableLiveData(false)
+    val isVpnActive: LiveData<Boolean> = _isVpnActive
+
+    private val _vpnStatus = MutableLiveData("VPN flow: inactive")
+    val vpnStatus: LiveData<String> = _vpnStatus
+
     fun setMonitoring(active: Boolean) {
         _isMonitoring.value = active
     }
 
     fun setConnectionStatus(status: String) {
         _connectionStatus.postValue(status)
+    }
+
+    fun setVpnStatus(status: String) {
+        _vpnStatus.postValue(status)
+    }
+
+    fun setVpnActive(active: Boolean) {
+        _isVpnActive.postValue(active)
     }
 
     fun approveAlert(anomalyId: String) {
