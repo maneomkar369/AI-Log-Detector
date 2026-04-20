@@ -45,6 +45,20 @@ class Settings(BaseSettings):
     dashboard_secret_key: str = "change-me-to-a-random-secret"
     dashboard_port: int = 5000
 
+    # ── Rule-based Threat Intel ──
+    # Comma-separated package names (lowercase) that should immediately trigger alerts.
+    # Keep empty by default in production-safe mode; set explicit IOCs in .env when needed.
+    malicious_apps: str = ""
+    # Comma-separated domains/hosts (lowercase) that should immediately trigger alerts.
+    # Keep empty by default in production-safe mode; set explicit IOCs in .env when needed.
+    malicious_domains: str = ""
+    # Cooldown to avoid duplicate immediate alerts for the same indicator.
+    rule_alert_cooldown_seconds: int = 120
+    # Ignore known synthetic/test sources so they never generate production alerts.
+    ignored_alert_device_ids: str = "ioc_test_device"
+    ignored_alert_device_prefixes: str = "test_device_,ioc_test_"
+    ignored_alert_packages: str = "com.bad.malware"
+
     class Config:
         env_file = "../.env"
         env_file_encoding = "utf-8"

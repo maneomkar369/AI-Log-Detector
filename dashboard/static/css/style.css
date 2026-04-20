@@ -255,6 +255,10 @@ body {
     margin-bottom: 16px;
 }
 
+.metric-grid-ioc {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .metric-card {
     border: 1px solid var(--line);
     border-radius: 15px;
@@ -277,6 +281,20 @@ body {
 .metric-card:hover {
     transform: translateY(-3px);
     border-color: rgba(116, 200, 239, 0.5);
+}
+
+.metric-filter-card {
+    cursor: pointer;
+}
+
+.metric-filter-card:focus-visible {
+    outline: 2px solid rgba(75, 212, 255, 0.78);
+    outline-offset: 2px;
+}
+
+.metric-filter-card.is-active {
+    border-color: rgba(49, 240, 190, 0.64);
+    box-shadow: inset 0 0 0 1px rgba(49, 240, 190, 0.38), 0 12px 24px rgba(1, 29, 31, 0.32);
 }
 
 .metric-card:hover::after {
@@ -330,6 +348,23 @@ canvas {
     margin-bottom: 8px;
 }
 
+.table-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.table-controls label {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.table-controls select {
+    min-width: 170px;
+}
+
 .table-wrap {
     overflow: auto;
     border: 1px solid var(--line);
@@ -373,6 +408,10 @@ canvas {
 
 .data-table tbody tr:hover {
     background: rgba(24, 52, 74, 0.5);
+}
+
+.data-table tbody tr.row-animate {
+    animation: fadeLift 0.24s ease;
 }
 
 .mono-table td,
@@ -426,6 +465,38 @@ canvas {
     color: #dafce8;
     background: rgba(61, 224, 132, 0.19);
     border-color: rgba(61, 224, 132, 0.43);
+}
+
+.ioc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 86px;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.ioc-app {
+    color: #c8fbf2;
+    background: rgba(49, 240, 190, 0.2);
+    border-color: rgba(49, 240, 190, 0.45);
+}
+
+.ioc-domain {
+    color: #ffe4c6;
+    background: rgba(244, 183, 64, 0.2);
+    border-color: rgba(244, 183, 64, 0.45);
+}
+
+.ioc-none {
+    color: var(--text-faint);
+    background: rgba(146, 181, 204, 0.1);
+    border-color: rgba(146, 181, 204, 0.24);
 }
 
 .header-actions {
@@ -692,6 +763,10 @@ select:focus {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .metric-grid-ioc {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .chart-grid,
     .config-grid,
     .settings-grid {
@@ -725,6 +800,10 @@ select:focus {
 
     .profile-grid,
     .metric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-grid-ioc {
         grid-template-columns: 1fr;
     }
 

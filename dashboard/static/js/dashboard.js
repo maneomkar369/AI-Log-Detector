@@ -8,6 +8,8 @@ const dashboardState = {
     logsPaused: false,
     adbRowCount: 0,
     maxAdbRows: 650,
+    recentEventRows: [],
+    recentEventFilter: "all",
 };
 
 const PROFILE_PRESETS = {
@@ -61,6 +63,8 @@ function initDashboardExperience() {
     bindAdbConfigForm();
     bindProfileCards();
     bindSettingsForm();
+    bindRecentEventFilters();
+    bindIocMetricCards();
 
     void loadInitialData();
     window.setInterval(refreshSummary, 10000);
@@ -154,6 +158,9 @@ function renderMetrics(metrics) {
     setText("metric-critical-alerts", String(metrics.critical_alerts || 0));
     setText("metric-network-events", String(metrics.network_events || 0));
     setText("metric-auth-failures", String(metrics.auth_failures || 0));
+    setText("metric-ioc-alerts", String(metrics.ioc_alerts || 0));
+    setText("metric-ioc-app-alerts", String(metrics.ioc_app_alerts || 0));
+    setText("metric-ioc-domain-alerts", String(metrics.ioc_domain_alerts || 0));
 }
 
 function initCharts() {
@@ -296,30 +303,142 @@ function renderDistributionChart(distribution) {
 }
 
 function renderRecentEvents(rows) {
+    dashboardState.recentEventRows = Array.isArray(rows) ? rows : [];
+    applyRecentEventFilter();
+}
+
+function bindRecentEventFilters() {
+    const select = document.getElementById("recent-events-filter");
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener("change", () => {
+        setRecentEventFilter(select.value || "all");
+    });
+}
+
+function bindIocMetricCards() {
+    const cards = document.querySelectorAll(".metric-filter-card[data-filter-mode]");
+    cards.forEach((card) => {
+        const mode = card.getAttribute("data-filter-mode") || "all";
+        card.addEventListener("click", () => {
+            setRecentEventFilter(mode);
+        });
+
+        card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setRecentEventFilter(mode);
+            }
+        });
+    });
+
+    syncIocMetricCardState();
+}
+
+function setRecentEventFilter(mode) {
+    dashboardState.recentEventFilter = mode || "all";
+
+    const select = document.getElementById("recent-events-filter");
+    if (select && select.value !== dashboardState.recentEventFilter) {
+        select.value = dashboardState.recentEventFilter;
+    }
+
+    applyRecentEventFilter();
+    syncIocMetricCardState();
+}
+
+function syncIocMetricCardState() {
+    const cards = document.querySelectorAll(".metric-filter-card[data-filter-mode]");
+    cards.forEach((card) => {
+        const mode = card.getAttribute("data-filter-mode") || "";
+        const isActive = mode === dashboardState.recentEventFilter;
+        card.classList.toggle("is-active", isActive);
+        card.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+}
+
+function applyRecentEventFilter() {
     const tbody = document.getElementById("recent-events-body");
     if (!tbody) {
         return;
     }
 
+    const rows = dashboardState.recentEventRows;
+    const mode = dashboardState.recentEventFilter;
+    const filteredRows = rows.filter((row) => {
+        const iocType = normalizeIocType(row.ioc_type || classifyIocFromRow(row));
+
+        if (mode === "ioc") {
+            return iocType === "app" || iocType === "domain";
+        }
+        if (mode === "ioc-app") {
+            return iocType === "app";
+        }
+        if (mode === "ioc-domain") {
+            return iocType === "domain";
+        }
+        return true;
+    });
+
     tbody.innerHTML = "";
-    if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No events available yet.</td></tr>';
+    if (!filteredRows.length) {
+        const message = rows.length
+            ? "No rows match the selected filter."
+            : "No events available yet.";
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-row">${escapeHtml(message)}</td></tr>`;
         return;
     }
 
-    rows.forEach((row) => {
+    filteredRows.forEach((row) => {
         const tr = document.createElement("tr");
         const severity = (row.severity || "low").toLowerCase();
+        const iocType = normalizeIocType(row.ioc_type || classifyIocFromRow(row));
         tr.innerHTML = `
             <td>${escapeHtml(formatDateTime(row.time))}</td>
             <td>${escapeHtml(row.device_id || "-")}</td>
             <td>${escapeHtml(row.source || "-")}</td>
             <td>${escapeHtml(row.event_type || "-")}</td>
             <td><span class="severity-badge severity-${escapeHtml(severity)}">${escapeHtml(severity)}</span></td>
+            <td>${renderIocBadge(iocType)}</td>
             <td>${escapeHtml(row.message || "-")}</td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function normalizeIocType(rawValue) {
+    const token = String(rawValue || "none").toLowerCase();
+    if (token === "app" || token === "domain") {
+        return token;
+    }
+    return "none";
+}
+
+function classifyIocFromRow(row) {
+    if (!row || String(row.source || "").toUpperCase() !== "ALERT") {
+        return "none";
+    }
+
+    const message = String(row.message || "").toLowerCase();
+    if (message.includes("known malicious app activity detected")) {
+        return "app";
+    }
+    if (message.includes("known malicious website detected")) {
+        return "domain";
+    }
+    return "none";
+}
+
+function renderIocBadge(iocType) {
+    if (iocType === "app") {
+        return '<span class="ioc-badge ioc-app">App IOC</span>';
+    }
+    if (iocType === "domain") {
+        return '<span class="ioc-badge ioc-domain">Domain IOC</span>';
+    }
+    return '<span class="ioc-badge ioc-none">--</span>';
 }
 
 function bindLogControls() {
@@ -383,7 +502,7 @@ function addAdbLogRow(entry, withAnimation = true) {
     `;
 
     if (withAnimation) {
-        tr.style.animation = "fadeLift 0.24s ease";
+        tr.classList.add("row-animate");
     }
 
     tbody.appendChild(tr);
@@ -676,5 +795,5 @@ function escapeHtml(value) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    initSocket();
+    initDashboardExperience();
 });

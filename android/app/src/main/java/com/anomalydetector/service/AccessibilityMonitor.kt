@@ -33,6 +33,17 @@ class AccessibilityMonitor : AccessibilityService() {
     // Touch timing
     private var lastTouchTime = 0L
 
+    // Browser-domain telemetry (host only) for malicious website detection.
+    private val browserPackages = setOf(
+        "com.android.chrome",
+        "org.mozilla.firefox",
+        "com.microsoft.emmx",
+        "com.opera.browser",
+        "com.brave.browser",
+        "com.sec.android.app.sbrowser",
+    )
+    private val recentDomainSeenAt = mutableMapOf<String, Long>()
+
     override fun onServiceConnected() {
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED or
@@ -67,6 +78,8 @@ class AccessibilityMonitor : AccessibilityService() {
 
     private fun handleKeystroke(event: AccessibilityEvent) {
         val now = System.currentTimeMillis()
+        maybeCaptureWebDomain(event, now)
+
         if (lastKeystrokeTime > 0) {
             val interval = now - lastKeystrokeTime
             if (interval in 10..5000) {  // Filter noise
@@ -93,6 +106,68 @@ class AccessibilityMonitor : AccessibilityService() {
                 ))
             }
         }
+    }
+
+    private fun maybeCaptureWebDomain(event: AccessibilityEvent, now: Long) {
+        val packageName = event.packageName?.toString() ?: return
+        if (packageName !in browserPackages) {
+            return
+        }
+
+        val textCandidates = mutableListOf<String>()
+        event.text?.forEach { textCandidates.add(it.toString()) }
+        event.contentDescription?.toString()?.let { textCandidates.add(it) }
+
+        val domain = textCandidates
+            .asSequence()
+            .mapNotNull { extractDomain(it) }
+            .firstOrNull()
+            ?: return
+
+        val lastSeenAt = recentDomainSeenAt[domain] ?: 0L
+        if (now - lastSeenAt < 60_000L) {
+            return
+        }
+        recentDomainSeenAt[domain] = now
+
+        scope.launch {
+            database.behaviorEventDao().insert(
+                BehaviorEvent(
+                    eventType = "WEB_DOMAIN",
+                    packageName = packageName,
+                    timestamp = now,
+                    data = gson.toJson(
+                        mapOf(
+                            "domain" to domain,
+                            "source" to "accessibility",
+                        )
+                    )
+                )
+            )
+        }
+    }
+
+    private fun extractDomain(raw: String): String? {
+        val value = raw.trim().lowercase()
+        if (value.isBlank()) {
+            return null
+        }
+
+        val withoutScheme = value
+            .removePrefix("https://")
+            .removePrefix("http://")
+        val host = withoutScheme
+            .substringBefore('/')
+            .substringBefore(':')
+            .removePrefix("www.")
+            .trim('.')
+
+        if (host.isBlank()) {
+            return null
+        }
+
+        val domainRegex = Regex("^[a-z0-9][a-z0-9.-]*\\.[a-z]{2,}$")
+        return if (domainRegex.matches(host)) host else null
     }
 
     private fun handleTouch(event: AccessibilityEvent) {

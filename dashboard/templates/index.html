@@ -31,6 +31,21 @@
             </article>
         </div>
 
+        <div class="metric-grid metric-grid-ioc">
+            <article class="metric-card metric-filter-card" data-filter-mode="ioc" role="button" tabindex="0" aria-label="Filter recent events by IOC alerts">
+                <p class="metric-label">IOC Alerts</p>
+                <p class="metric-value" id="metric-ioc-alerts">0</p>
+            </article>
+            <article class="metric-card metric-filter-card" data-filter-mode="ioc-app" role="button" tabindex="0" aria-label="Filter recent events by app IOC alerts">
+                <p class="metric-label">App IOC Alerts</p>
+                <p class="metric-value" id="metric-ioc-app-alerts">0</p>
+            </article>
+            <article class="metric-card metric-filter-card" data-filter-mode="ioc-domain" role="button" tabindex="0" aria-label="Filter recent events by domain IOC alerts">
+                <p class="metric-label">Domain IOC Alerts</p>
+                <p class="metric-value" id="metric-ioc-domain-alerts">0</p>
+            </article>
+        </div>
+
         <div class="chart-grid">
             <article class="glass-panel">
                 <h3>7-Day Trend by Signal Type</h3>
@@ -45,6 +60,15 @@
         <article class="glass-panel">
             <div class="table-head">
                 <h3>Recent Events</h3>
+                <div class="table-controls">
+                    <label for="recent-events-filter">Filter</label>
+                    <select id="recent-events-filter" aria-label="Filter recent events">
+                        <option value="all">All Rows</option>
+                        <option value="ioc">IOC Alerts</option>
+                        <option value="ioc-app">App IOC</option>
+                        <option value="ioc-domain">Domain IOC</option>
+                    </select>
+                </div>
             </div>
             <div class="table-wrap">
                 <table class="data-table">
@@ -55,12 +79,13 @@
                             <th>Source</th>
                             <th>Type</th>
                             <th>Severity</th>
+                            <th>IOC</th>
                             <th>Message</th>
                         </tr>
                     </thead>
                     <tbody id="recent-events-body">
                         <tr>
-                            <td colspan="6" class="empty-row">Waiting for analytics data...</td>
+                            <td colspan="7" class="empty-row">Waiting for analytics data...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -276,8 +301,4 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    initDashboardExperience();
-</script>
-{% endblock %}
+{% block scripts %}{% endblock %}

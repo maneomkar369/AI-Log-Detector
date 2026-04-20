@@ -169,7 +169,90 @@ adb start-server
 adb devices
 ```
 
-## 11. Optional: Run Without Docker (Dev Mode)
+If dashboard logs show:
+
+```text
+failed to connect to 'host.docker.internal:5037': network is unreachable
+```
+
+Use host-IP bridge mode instead of host.docker.internal:
+
+```bash
+# 1) Start host adb server
+adb start-server
+adb devices
+
+# 2) In project root .env
+ADB_SERVER_SOCKET=tcp:YOUR_HOST_LAN_IP:5037
+
+# 3) Restart stack
+docker compose up -d --build
+```
+
+Dashboard browser CSP warning about eval:
+- The dashboard now sends explicit CSP headers and avoids inline scripts.
+- If a third-party script still requires string evaluation in your environment, set:
+
+```bash
+DASHBOARD_CSP_ALLOW_UNSAFE_EVAL=true
+```
+
+Only enable this as a temporary compatibility fallback.
+
+## 11. Real Alert Mode (No Fake/Test Alerts)
+
+Use this profile when you want production-like alerts only.
+
+1. Keep IOC lists empty unless you add verified real indicators in .env:
+
+```bash
+MALICIOUS_APPS=
+MALICIOUS_DOMAINS=
+RULE_ALERT_COOLDOWN_SECONDS=120
+IGNORED_ALERT_DEVICE_IDS=ioc_test_device
+IGNORED_ALERT_DEVICE_PREFIXES=test_device_,ioc_test_
+IGNORED_ALERT_PACKAGES=com.bad.malware
+```
+
+2. Remove the dummy test app from device (if installed):
+
+```bash
+adb uninstall com.bad.malware
+```
+
+3. Restart backend services:
+
+```bash
+docker compose up -d --build edge_server
+docker compose restart dashboard
+```
+
+4. Remove historical fake/test data (one-time cleanup):
+
+```bash
+docker compose exec postgres psql -U admin -d anomaly_detection -c "BEGIN; \
+DELETE FROM alerts \
+WHERE device_id='ioc_test_device' \
+	OR device_id LIKE 'test_device_%' \
+	OR lower(message) LIKE '%com.bad.malware%' \
+	OR lower(coalesce(actions,'')) LIKE '%com.bad.malware%' \
+	OR lower(message) LIKE '%dummy%'; \
+DELETE FROM behavior_events \
+WHERE device_id='ioc_test_device' \
+	OR device_id LIKE 'test_device_%' \
+	OR lower(coalesce(package_name,''))='com.bad.malware'; \
+COMMIT;"
+```
+
+5. Verify fake indicators are gone:
+
+```bash
+docker compose exec postgres psql -U admin -d anomaly_detection -c "SELECT COUNT(*) AS alerts_dummy_or_temp FROM alerts WHERE device_id='ioc_test_device' OR device_id LIKE 'test_device_%' OR lower(message) LIKE '%com.bad.malware%' OR lower(coalesce(actions,'')) LIKE '%com.bad.malware%' OR lower(message) LIKE '%dummy%';"
+docker compose exec postgres psql -U admin -d anomaly_detection -c "SELECT COUNT(*) AS events_dummy_or_temp FROM behavior_events WHERE device_id='ioc_test_device' OR device_id LIKE 'test_device_%' OR lower(coalesce(package_name,''))='com.bad.malware';"
+curl -sS http://localhost:5001/api/dashboard/alerts | grep -i -E 'com.bad.malware|ioc_test_device|test_device_' || echo "No fake alert matches in dashboard API"
+```
+
+## 12. Optional: Run Without Docker (Dev Mode)
 
 Edge server:
 
@@ -198,3 +281,19 @@ Note: In non-docker mode, defaults are usually:
 ---
 
 If you want, I can also generate a one-page START.sh + STOP.sh so your team can run the full stack with two commands.
+Status:
+
+Ran 
+./scripts/start_all.sh 
+from start_all.sh
+Docker services are Up: dashboard, edge_server, postgres, redis
+Edge health OK: {"status":"ok","service":"behavioral-anomaly-detector"}
+Dashboard API OK: returned [] for alerts (no alerts yet)
+ngrok active URL: https://grid-scuff-diploma.ngrok-free.dev (forwarding to localhost:8000)
+Use this in Android config:
+
+Config.kt
+Set SERVER_URL to: wss://grid-scuff-diploma.ngrok-free.dev/ws
+When done, stop with:
+
+./scripts/stop_all.sh

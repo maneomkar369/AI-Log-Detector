@@ -8,12 +8,15 @@ the analysis pipeline.
 
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect
 
+from config import settings
 from models.database import async_session
 from models.device import Device
 from models.behavior_event import BehaviorEvent
@@ -40,6 +43,8 @@ class ConnectionManager:
         self.anomaly_detector = AnomalyDetector()
         self.baseline_manager = BaselineManager()
         self.alert_manager = AlertManager()
+        # Deduplicate immediate indicator alerts (e.g., same malicious app/domain repeated).
+        self._indicator_alert_cache: Dict[str, float] = {}
 
     def _socket_count(self) -> int:
         return sum(len(sockets) for sockets in self.active_connections.values())
@@ -124,6 +129,15 @@ class ConnectionManager:
             logger.warning("Malformed JSON from %s: %s", device_id, raw_data[:200])
             return
 
+        device_id = str(device_id or "").strip()
+        if not device_id:
+            logger.warning("Dropping message with empty device id")
+            return
+
+        if self._is_ignored_device(device_id):
+            logger.info("Ignoring message from configured non-production device: %s", device_id)
+            return
+
         # Normalize event keys
         normalized = []
         for ev in events:
@@ -133,6 +147,15 @@ class ConnectionManager:
                 "timestamp": ev.get("timestamp", 0),
                 "data": ev.get("data", "{}"),
             })
+
+        # Immediate rule check so known malicious indicators alert quickly.
+        immediate_rule_alert = self._evaluate_rule_alert(normalized)
+        if (
+            immediate_rule_alert
+            and immediate_rule_alert.get("indicator")
+            and self._should_emit_indicator_alert(device_id, immediate_rule_alert)
+        ):
+            await self._emit_rule_alert(device_id, immediate_rule_alert, normalized, source="rule-immediate")
 
         # Buffer events in Redis
         for ev in normalized:
@@ -153,6 +176,11 @@ class ConnectionManager:
         Flush the event buffer, extract features, run anomaly detection,
         update baseline, and create alerts if needed.
         """
+        if self._is_ignored_device(device_id):
+            await self.redis.flush_buffer(device_id)
+            logger.info("Skipped analysis for ignored device: %s", device_id)
+            return
+
         # Flush buffered events
         events = await self.redis.flush_buffer(device_id)
         if not events:
@@ -202,6 +230,12 @@ class ConnectionManager:
                 cusum_neg=device.cusum_neg,
             )
             rule_alert = self._evaluate_rule_alert(events)
+
+            # If this is a repeated indicator-only rule alert, suppress duplicates.
+            if rule_alert and not detection.is_anomaly:
+                if not self._should_emit_indicator_alert(device_id, rule_alert):
+                    rule_alert = None
+
             is_suspicious_window = detection.is_anomaly or rule_alert is not None
 
             # Update CUSUM
@@ -303,6 +337,78 @@ class ConnectionManager:
                     alert_severity, alert_confidence,
                 )
 
+    def _should_emit_indicator_alert(self, device_id: str, rule_alert: Dict[str, Any]) -> bool:
+        """
+        Apply cooldown only for indicator-based rules (e.g., app/domain IOC).
+
+        Non-indicator rule alerts are not throttled by this helper.
+        """
+        indicator = str(rule_alert.get("indicator", "")).strip()
+        if not indicator:
+            return True
+
+        cache_key = f"{device_id}:{indicator.lower()}"
+        now_ts = datetime.utcnow().timestamp()
+        cooldown = max(0, int(settings.rule_alert_cooldown_seconds))
+
+        last_ts = self._indicator_alert_cache.get(cache_key)
+        if last_ts is not None and (now_ts - last_ts) < cooldown:
+            return False
+
+        self._indicator_alert_cache[cache_key] = now_ts
+
+        # Prune stale cache entries opportunistically.
+        stale_cutoff = now_ts - max(cooldown * 3, 300)
+        stale_keys = [key for key, ts in self._indicator_alert_cache.items() if ts < stale_cutoff]
+        for key in stale_keys:
+            self._indicator_alert_cache.pop(key, None)
+
+        return True
+
+    async def _emit_rule_alert(
+        self,
+        device_id: str,
+        rule_alert: Dict[str, Any],
+        events: List[Dict[str, Any]],
+        source: str,
+    ) -> None:
+        """Create, persist, and deliver a rule-based alert."""
+        action_targets = self._extract_action_targets(events)
+        explicit_target_package = rule_alert.get("target_package")
+        if isinstance(explicit_target_package, str) and explicit_target_package.strip():
+            action_targets["target_package"] = explicit_target_package.strip()
+
+        alert = self.alert_manager.create_alert(
+            device_id=device_id,
+            severity=int(rule_alert["severity"]),
+            threat_type=str(rule_alert["threat_type"]),
+            message=str(rule_alert["message"]),
+            confidence=float(rule_alert["confidence"]),
+            mahalanobis_distance=0.0,
+            target_package=action_targets.get("target_package"),
+            target_uid=action_targets.get("target_uid"),
+        )
+
+        async with async_session() as alert_db:
+            await self.alert_manager.save_alert(alert_db, alert)
+            await alert_db.commit()
+
+        alert_msg = self.alert_manager.alert_to_ws_message(alert)
+        delivered = await self.send_to_device(device_id, alert_msg)
+        if not delivered:
+            logger.warning("Alert %s could not be delivered to any active socket", alert.anomaly_id)
+
+        await self.redis.publish_alert(json.loads(alert_msg))
+
+        logger.warning(
+            "ALERT: device=%s source=%s type=%s severity=%d confidence=%.2f",
+            device_id,
+            source,
+            str(rule_alert["threat_type"]),
+            int(rule_alert["severity"]),
+            float(rule_alert["confidence"]),
+        )
+
     @staticmethod
     def _parse_event_data(event: Dict[str, Any]) -> Dict[str, Any]:
         """Parse event payload into a dictionary."""
@@ -348,7 +454,10 @@ class ConnectionManager:
                 package_name = candidate.strip()
                 if not package_name:
                     continue
-                package_counts[package_name] = package_counts.get(package_name, 0) + 1
+                normalized_package = package_name.lower()
+                if ConnectionManager._is_ignored_package(normalized_package):
+                    continue
+                package_counts[normalized_package] = package_counts.get(normalized_package, 0) + 1
 
             if event_type == "NETWORK_APP":
                 uid_value = data.get("uid")
@@ -389,10 +498,48 @@ class ConnectionManager:
         battery_critical_events = 0
         network_flow_events = 0
         total_network_bytes = 0.0
+        observed_packages: set[str] = set()
+        observed_domains: set[str] = set()
+
+        malicious_apps = ConnectionManager._parse_csv_setting(settings.malicious_apps)
+        malicious_domains = ConnectionManager._parse_csv_setting(settings.malicious_domains)
+        ignored_packages = ConnectionManager._parse_csv_setting(settings.ignored_alert_packages)
 
         for ev in events:
             etype = str(ev.get("event_type", "")).upper()
             data = ConnectionManager._parse_event_data(ev)
+
+            package_candidates = [
+                ev.get("package_name"),
+                data.get("package"),
+                data.get("packageName"),
+                data.get("targetPackage"),
+            ]
+            normalized_packages: list[str] = []
+            for candidate in package_candidates:
+                if isinstance(candidate, str) and candidate.strip():
+                    normalized_packages.append(candidate.strip().lower())
+
+            if normalized_packages and all(
+                ConnectionManager._is_ignored_package(pkg, ignored_packages)
+                for pkg in normalized_packages
+            ):
+                continue
+
+            for package_name in normalized_packages:
+                if not ConnectionManager._is_ignored_package(package_name, ignored_packages):
+                    observed_packages.add(package_name)
+
+            domain_candidates = [
+                data.get("domain"),
+                data.get("host"),
+                data.get("url"),
+                data.get("dstHost"),
+            ]
+            for candidate in domain_candidates:
+                normalized_domain = ConnectionManager._normalize_domain(candidate)
+                if normalized_domain:
+                    observed_domains.add(normalized_domain)
 
             if etype == "SECURITY_PACKAGE_EVENT":
                 package_events += 1
@@ -419,14 +566,41 @@ class ConnectionManager:
         # Keep highest severity rule when multiple rules match.
         rule_alert: Optional[Dict[str, Any]] = None
 
+        for package_name in sorted(observed_packages):
+            if package_name in malicious_apps:
+                candidate = {
+                    "severity": 9,
+                    "threat_type": "MALWARE_MIMICRY",
+                    "message": f"Known malicious app activity detected: {package_name}",
+                    "confidence": 0.97,
+                    "indicator": f"app:{package_name}",
+                    "target_package": package_name,
+                }
+                if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                    rule_alert = candidate
+
+        for domain in sorted(observed_domains):
+            if ConnectionManager._is_malicious_domain(domain, malicious_domains):
+                candidate = {
+                    "severity": 8,
+                    "threat_type": "MALWARE_MIMICRY",
+                    "message": f"Known malicious website detected: {domain}",
+                    "confidence": 0.94,
+                    "indicator": f"domain:{domain}",
+                }
+                if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                    rule_alert = candidate
+
         if package_events >= 2:
             severity = min(9, 6 + package_events)
-            rule_alert = {
+            candidate = {
                 "severity": severity,
                 "threat_type": "INSIDER_THREAT",
                 "message": f"{package_events} app package modifications detected in one analysis window",
                 "confidence": min(0.7 + package_events * 0.05, 0.95),
             }
+            if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                rule_alert = candidate
 
         if auth_events >= 15:
             candidate = {
@@ -462,6 +636,90 @@ class ConnectionManager:
                 rule_alert = candidate
 
         return rule_alert
+
+    @staticmethod
+    def _parse_csv_setting(raw_value: str) -> set[str]:
+        """Parse comma-separated settings into lowercase tokens."""
+        return {
+            token.strip().lower()
+            for token in str(raw_value or "").split(",")
+            if token.strip()
+        }
+
+    @staticmethod
+    def _is_ignored_device(device_id: str) -> bool:
+        """Check whether alerts/events for this device should be ignored."""
+        normalized = str(device_id or "").strip().lower()
+        if not normalized:
+            return False
+
+        ignored_ids = ConnectionManager._parse_csv_setting(settings.ignored_alert_device_ids)
+        if normalized in ignored_ids:
+            return True
+
+        ignored_prefixes = ConnectionManager._parse_csv_setting(settings.ignored_alert_device_prefixes)
+        return any(normalized.startswith(prefix) for prefix in ignored_prefixes)
+
+    @staticmethod
+    def _is_ignored_package(package_name: str, ignored_packages: Optional[set[str]] = None) -> bool:
+        """Check whether package-sourced signals should be ignored."""
+        normalized = str(package_name or "").strip().lower()
+        if not normalized:
+            return False
+
+        blocked = (
+            ignored_packages
+            if ignored_packages is not None
+            else ConnectionManager._parse_csv_setting(settings.ignored_alert_packages)
+        )
+        return normalized in blocked
+
+    @staticmethod
+    def _normalize_domain(value: Any) -> Optional[str]:
+        """Normalize a host/domain/url-ish value to a bare lowercase domain."""
+        if not isinstance(value, str):
+            return None
+
+        candidate = value.strip().lower()
+        if not candidate:
+            return None
+
+        if "://" in candidate:
+            parsed = urlparse(candidate)
+            host = parsed.hostname or ""
+        else:
+            host = candidate.split("/")[0]
+
+        host = host.strip().strip(".")
+        if host.startswith("www."):
+            host = host[4:]
+
+        if ":" in host:
+            host = host.split(":", 1)[0]
+
+        if not host:
+            return None
+
+        # Keep domains only (ignore plain IPv4 for domain IOC matching).
+        if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", host):
+            return None
+
+        if not re.fullmatch(r"[a-z0-9][a-z0-9.-]*\.[a-z]{2,}", host):
+            return None
+
+        return host
+
+    @staticmethod
+    def _is_malicious_domain(domain: str, blocked_domains: set[str]) -> bool:
+        """Match exact blocked domain or any subdomain of a blocked domain."""
+        normalized = ConnectionManager._normalize_domain(domain)
+        if not normalized:
+            return False
+
+        for blocked in blocked_domains:
+            if normalized == blocked or normalized.endswith(f".{blocked}"):
+                return True
+        return False
 
     async def _accumulate_sample(
         self, device: Device, vector: np.ndarray, db

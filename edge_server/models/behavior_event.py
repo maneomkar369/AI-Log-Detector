@@ -25,7 +25,7 @@ class BehaviorEvent(Base):
 
     # Event classification
     event_type: Mapped[str] = mapped_column(String(32))
-    # Types: APP_USAGE, KEYSTROKE, TOUCH, LOCATION, NETWORK, ACCESSIBILITY
+    # Types: APP_USAGE, KEYSTROKE, TOUCH, LOCATION, NETWORK, ACCESSIBILITY, WEB_DOMAIN
 
     package_name: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     timestamp: Mapped[int] = mapped_column(BigInteger)  # epoch millis from device

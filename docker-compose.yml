@@ -45,7 +45,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       EDGE_SERVER_HOST: "0.0.0.0"
       EDGE_SERVER_PORT: "8000"
-      ADB_SERVER_SOCKET: tcp:host.docker.internal:5037
+      ADB_SERVER_SOCKET: ${ADB_SERVER_SOCKET:-tcp:host.docker.internal:5037}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -63,7 +63,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       DASHBOARD_SECRET_KEY: change-me-in-production
       DASHBOARD_PORT: "5000"
-      ADB_SERVER_SOCKET: tcp:host.docker.internal:5037
+      ADB_SERVER_SOCKET: ${ADB_SERVER_SOCKET:-tcp:host.docker.internal:5037}
+      DASHBOARD_CSP_ALLOW_UNSAFE_EVAL: ${DASHBOARD_CSP_ALLOW_UNSAFE_EVAL:-false}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

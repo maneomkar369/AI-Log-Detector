@@ -67,6 +67,65 @@ def _severity_label(score: int) -> str:
     return "low"
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _build_dashboard_csp() -> str:
+    """Build a strict CSP with an optional unsafe-eval escape hatch."""
+    script_sources = [
+        "'self'",
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net",
+    ]
+    if _env_bool("DASHBOARD_CSP_ALLOW_UNSAFE_EVAL", default=False):
+        script_sources.append("'unsafe-eval'")
+
+    directives = {
+        "default-src": ["'self'"],
+        "base-uri": ["'self'"],
+        "frame-ancestors": ["'self'"],
+        "object-src": ["'none'"],
+        "script-src": script_sources,
+        "style-src": ["'self'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+        "img-src": ["'self'", "data:"],
+        # Include CDN hosts so browser source-map fetches for third-party scripts
+        # do not raise CSP violations in the console.
+        "connect-src": [
+            "'self'",
+            "ws:",
+            "wss:",
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+        ],
+    }
+
+    return "; ".join(
+        f"{directive} {' '.join(sources)}" for directive, sources in directives.items()
+    )
+
+
+def _classify_ioc_alert(alert: Dict[str, Any]) -> Optional[str]:
+    """Return IOC type for alert rows when known indicator context is present."""
+    indicator = str(alert.get("indicator", "")).strip().lower()
+    if indicator.startswith("app:"):
+        return "app"
+    if indicator.startswith("domain:"):
+        return "domain"
+
+    message = str(alert.get("message", "")).strip().lower()
+    if "known malicious app activity detected" in message:
+        return "app"
+    if "known malicious website detected" in message:
+        return "domain"
+
+    return None
+
+
 def _alert_identity(alert: Dict[str, Any]) -> str:
     value = alert.get("anomalyId", alert.get("anomaly_id", ""))
     return str(value or "").strip()
@@ -156,6 +215,13 @@ class AdbLogStreamer:
             "commands": [],
             "last_executed": _utcnow_iso(),
         }
+        self.retry_initial_seconds = max(0.5, float(os.getenv("ADB_RETRY_INITIAL_SECONDS", "1.0")))
+        self.retry_max_seconds = max(
+            self.retry_initial_seconds,
+            float(os.getenv("ADB_RETRY_MAX_SECONDS", "10.0")),
+        )
+        self._retry_delay_seconds = self.retry_initial_seconds
+        self._next_retry_at = 0.0
         self.current_buffer_hint = self.config["buffer"]
         self.logs: deque = deque(maxlen=1500)
         self.stop_event = threading.Event()
@@ -279,12 +345,30 @@ class AdbLogStreamer:
                 "message": "adb get-state timeout",
             }
 
-        state = (result.stdout or result.stderr or "").strip().lower()
+        raw_state = (result.stdout or result.stderr or "").strip()
+        state = raw_state.lower()
         if result.returncode == 0 and state == "device":
             return {
                 "connected": True,
                 "state": "device",
                 "message": "ADB device connected",
+            }
+
+        if (
+            "host.docker.internal:5037" in state
+            and (
+                "network is unreachable" in state
+                or "no route to host" in state
+                or "name or service not known" in state
+            )
+        ):
+            return {
+                "connected": False,
+                "state": "adb_bridge_unreachable",
+                "message": (
+                    "Cannot reach host.docker.internal:5037 from container. "
+                    "Set ADB_SERVER_SOCKET=tcp:<host-ip>:5037 or verify host-gateway mapping."
+                ),
             }
 
         if not state:
@@ -294,6 +378,14 @@ class AdbLogStreamer:
             "state": state,
             "message": f"ADB state: {state}",
         }
+
+    def _reset_retry_backoff(self) -> None:
+        self._retry_delay_seconds = self.retry_initial_seconds
+        self._next_retry_at = 0.0
+
+    def _schedule_retry(self) -> None:
+        self._next_retry_at = time.monotonic() + self._retry_delay_seconds
+        self._retry_delay_seconds = min(self._retry_delay_seconds * 2.0, self.retry_max_seconds)
 
     def _terminate_process(self, process: Optional[subprocess.Popen]) -> Optional[subprocess.Popen]:
         if process is None:
@@ -368,19 +460,25 @@ class AdbLogStreamer:
             if self.restart_event.is_set():
                 self.restart_event.clear()
                 process = self._terminate_process(process)
+                self._reset_retry_backoff()
 
             now = time.monotonic()
-            if now - last_status_check >= status_refresh_every:
+            if now < self._next_retry_at:
+                self.stop_event.wait(min(0.5, self._next_retry_at - now))
+                continue
+
+            if now - last_status_check >= status_refresh_every or process is None:
                 probe = self._check_device_state()
                 if not probe["connected"]:
                     self._set_status(False, probe["state"], probe["message"], probe["message"])
                     process = self._terminate_process(process)
-                    time.sleep(0.25)
                     last_status_check = now
+                    self._schedule_retry()
                     continue
 
                 self._set_status(True, probe["state"], probe["message"])
                 last_status_check = now
+                self._reset_retry_backoff()
 
             if process is None:
                 self._apply_buffer_size()
@@ -396,9 +494,10 @@ class AdbLogStreamer:
                         bufsize=1,
                     )
                     self._set_status(True, "streaming", "Streaming adb logcat")
+                    self._reset_retry_backoff()
                 except Exception as exc:
                     self._set_status(False, "logcat_error", "Failed to start adb logcat", str(exc))
-                    time.sleep(1.0)
+                    self._schedule_retry()
                     continue
 
             poll_interval = self.get_status()["config"]["poll_interval_ms"] / 1000.0
@@ -423,6 +522,7 @@ class AdbLogStreamer:
             if process is not None and process.poll() is not None:
                 process = self._terminate_process(process)
                 self._set_status(False, "restarting", "adb logcat exited; retrying")
+                self._schedule_retry()
 
         self._terminate_process(process)
 
@@ -444,6 +544,9 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
     critical_total = 0
     network_total = 0
     auth_failure_total = 0
+    ioc_total = 0
+    ioc_app_total = 0
+    ioc_domain_total = 0
 
     today_distribution = {
         "anomalies": 0,
@@ -460,6 +563,7 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
         severity = int(alert.get("severity", 0) or 0)
         threat_type = str(alert.get("threat_type", alert.get("threatType", "ANOMALY")))
         device_id = str(alert.get("device_id", alert.get("deviceId", "-")))
+        ioc_type = _classify_ioc_alert(alert)
 
         idx = day_to_index.get(day)
         if idx is not None:
@@ -469,6 +573,13 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
 
         if severity >= 9:
             critical_total += 1
+
+        if ioc_type == "app":
+            ioc_total += 1
+            ioc_app_total += 1
+        elif ioc_type == "domain":
+            ioc_total += 1
+            ioc_domain_total += 1
 
         if day == today:
             today_distribution["anomalies"] += 1
@@ -484,6 +595,7 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
                 "message": str(alert.get("message", "No message")),
                 "severity_score": severity,
                 "severity": _severity_label(severity),
+                "ioc_type": ioc_type or "none",
             }
         )
 
@@ -524,6 +636,7 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
                 "message": payload_preview[:180] if payload_preview else "No payload",
                 "severity_score": score,
                 "severity": _severity_label(score),
+                "ioc_type": "none",
             }
         )
 
@@ -535,6 +648,9 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
             "critical_alerts": critical_total,
             "network_events": network_total,
             "auth_failures": auth_failure_total,
+            "ioc_alerts": ioc_total,
+            "ioc_app_alerts": ioc_app_total,
+            "ioc_domain_alerts": ioc_domain_total,
         },
         "trend": trend,
         "today_distribution": today_distribution,
@@ -566,6 +682,14 @@ def create_app():
     profile_state: Dict[str, str] = {"active": "Development"}
 
     adb_streamer = AdbLogStreamer(socketio)
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("Content-Security-Policy", _build_dashboard_csp())
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        return response
 
     @app.route("/")
     def index():
