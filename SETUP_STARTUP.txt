@@ -1,0 +1,127 @@
+AI-LOG-DETECTOR: CLEAN SETUP AND STARTUP GUIDE
+
+This guide explains the fastest way to run the full stack locally.
+
+Services included:
+- edge_server (FastAPI + WebSocket)
+- dashboard (Flask)
+- postgres
+- redis
+
+----------------------------------------
+1) PREREQUISITES
+----------------------------------------
+- Docker Desktop (or Docker Engine + Compose)
+- ngrok CLI (for Android connectivity)
+- Android Studio (if running Android app)
+- ADB-enabled Android device (optional)
+
+----------------------------------------
+2) CLONE AND ENTER PROJECT
+----------------------------------------
+git clone https://github.com/maneomkar369/AI-Log-Detector.git
+cd AI-Log-Detector
+
+----------------------------------------
+3) START BACKEND STACK
+----------------------------------------
+docker compose up -d --build
+
+Check status:
+docker compose ps
+
+Expected endpoints:
+- Edge server: http://localhost:8000
+- Dashboard: http://localhost:5001
+
+----------------------------------------
+4) HEALTH CHECK
+----------------------------------------
+curl -sS http://localhost:8000/api/health && echo
+curl -sS http://localhost:5001/api/dashboard/alerts && echo
+
+If both return JSON, backend is ready.
+
+----------------------------------------
+5) START NGROK (FOR ANDROID)
+----------------------------------------
+One-time auth:
+ngrok config add-authtoken YOUR_NGROK_TOKEN
+
+Start tunnel:
+ngrok http 8000
+
+Optional reserved domain:
+ngrok http --domain=YOUR_RESERVED_DOMAIN.ngrok-free.dev 8000
+
+WebSocket URL format to use in Android:
+wss://YOUR_NGROK_DOMAIN/ws
+
+----------------------------------------
+6) ANDROID CONFIG
+----------------------------------------
+File:
+android/app/src/main/java/com/anomalydetector/Config.kt
+
+Set:
+var SERVER_URL = "wss://YOUR_NGROK_DOMAIN/ws"
+
+Then run the app and grant required permissions.
+
+----------------------------------------
+7) DAILY STARTUP ORDER
+----------------------------------------
+1. docker compose up -d
+2. ngrok http 8000
+3. Verify Android SERVER_URL still matches current ngrok domain
+4. Start monitoring in app
+5. Open dashboard: http://localhost:5001
+
+----------------------------------------
+8) QUICK END-TO-END CHECK
+----------------------------------------
+curl -sS "http://localhost:8000/api/alerts/YOUR_DEVICE_ID?limit=5" && echo
+
+----------------------------------------
+9) STOP EVERYTHING
+----------------------------------------
+Stop containers:
+docker compose down
+
+Optional full cleanup:
+docker compose down -v
+
+Stop ngrok with Ctrl+C in the ngrok terminal.
+
+----------------------------------------
+10) COMMON FIXES
+----------------------------------------
+Android shows disconnected:
+- Ensure URL is wss://.../ws (must include /ws)
+- Ensure ngrok is running
+- Ensure backend is running (docker compose ps)
+
+No dashboard data:
+- Verify Android permissions
+- Verify monitoring has started
+- Verify edge health endpoint
+
+ADB actions fail from containers:
+adb start-server
+adb devices
+
+If needed, set host LAN IP in .env:
+ADB_SERVER_SOCKET=tcp:YOUR_HOST_LAN_IP:5037
+
+Then restart stack:
+docker compose up -d --build
+
+----------------------------------------
+11) OPTIONAL: HELPER SCRIPTS
+----------------------------------------
+If your repo has scripts:
+- Start: ./scripts/start_all.sh
+- Stop:  ./scripts/stop_all.sh
+
+----------------------------------------
+END
