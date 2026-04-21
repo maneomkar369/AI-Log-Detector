@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from api.websocket_handler import ConnectionManager
 from config import settings
+from services.anomaly_detector import AnomalyResult, ThreatType
 
 
 def test_rule_alert_none_for_normal_window():
@@ -180,3 +181,87 @@ def test_ignored_device_matching(monkeypatch):
     assert ConnectionManager._is_ignored_device("test_device_0001")
     assert ConnectionManager._is_ignored_device("ioc_test_abc")
     assert not ConnectionManager._is_ignored_device("f9ed08dc27055482")
+
+
+def test_xai_explanation_includes_indicator_for_rule_alert():
+    events = [
+        {
+            "event_type": "APP_USAGE",
+            "package_name": "com.bad.malware",
+            "timestamp": 1700000000000,
+            "data": "{}",
+        },
+        {
+            "event_type": "SECURITY_PACKAGE_EVENT",
+            "timestamp": 1700000000500,
+            "data": '{"action":"android.intent.action.PACKAGE_REPLACED"}',
+        },
+    ]
+    rule_alert = {
+        "severity": 9,
+        "threat_type": "MALWARE_MIMICRY",
+        "message": "Known malicious app activity detected: com.bad.malware",
+        "confidence": 0.97,
+        "indicator": "app:com.bad.malware",
+    }
+
+    explanation = ConnectionManager._build_xai_explanation(
+        events=events,
+        detection=None,
+        rule_alert=rule_alert,
+        alert_source="rule",
+        selected_threat_type="MALWARE_MIMICRY",
+        selected_severity=9,
+        selected_message=rule_alert["message"],
+        selected_confidence=0.97,
+        selected_distance=0.0,
+        selected_threshold=None,
+    )
+
+    assert explanation["version"] == "xai-v1"
+    assert explanation["rule"]["indicator"] == "app:com.bad.malware"
+    assert "MALWARE_MIMICRY" in explanation["summary"]
+
+
+def test_xai_explanation_includes_model_ratio_for_anomaly():
+    events = [
+        {
+            "event_type": "APP_USAGE",
+            "package_name": "com.example.safe",
+            "timestamp": 1700000000000,
+            "data": "{}",
+        },
+        {
+            "event_type": "APP_USAGE",
+            "package_name": "com.example.safe",
+            "timestamp": 1700000001300,
+            "data": "{}",
+        },
+    ]
+
+    detection = AnomalyResult(
+        is_anomaly=True,
+        mahalanobis_distance=18.0,
+        threshold=6.0,
+        severity=8,
+        confidence=0.91,
+        threat_type=ThreatType.DEVICE_MISUSE,
+        message="Sudden behavioral deviation detected",
+    )
+
+    explanation = ConnectionManager._build_xai_explanation(
+        events=events,
+        detection=detection,
+        rule_alert=None,
+        alert_source="model",
+        selected_threat_type="DEVICE_MISUSE",
+        selected_severity=8,
+        selected_message=detection.message,
+        selected_confidence=0.91,
+        selected_distance=18.0,
+        selected_threshold=6.0,
+    )
+
+    assert explanation["model"]["distance_ratio"] == 3.0
+    assert explanation["window"]["event_count"] == 2
+    assert explanation["source"] == "model"

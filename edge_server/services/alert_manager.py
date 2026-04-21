@@ -9,7 +9,7 @@ import json
 import uuid
 import logging
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +43,7 @@ class AlertManager:
         mahalanobis_distance: float = 0.0,
         target_package: Optional[str] = None,
         target_uid: Optional[int] = None,
+        xai_explanation: Optional[Dict[str, Any]] = None,
     ) -> Alert:
         """
         Create a new Alert object (not yet persisted).
@@ -84,6 +85,7 @@ class AlertManager:
             message=message,
             confidence=confidence,
             mahalanobis_distance=mahalanobis_distance,
+            xai_explanation=json.dumps(xai_explanation) if xai_explanation else None,
             actions=json.dumps(actions),
             status="pending",
             created_at=datetime.utcnow(),
@@ -103,6 +105,7 @@ class AlertManager:
 
     def alert_to_ws_message(self, alert: Alert) -> str:
         """Serialize an alert for WebSocket delivery to the device."""
+        explanation = self._parse_json_object(alert.xai_explanation)
         return json.dumps({
             "type": "alert",
             "anomalyId": alert.anomaly_id,
@@ -115,10 +118,23 @@ class AlertManager:
             "message": alert.message,
             "confidence": alert.confidence,
             "actions": json.loads(alert.actions) if alert.actions else [],
+            "xaiExplanation": explanation,
+            "xai_explanation": explanation,
             "status": alert.status,
             "createdAt": alert.created_at.isoformat() if alert.created_at else None,
             "respondedAt": alert.responded_at.isoformat() if alert.responded_at else None,
         })
+
+    @staticmethod
+    def _parse_json_object(raw: Optional[str]) -> Dict[str, Any]:
+        """Parse a JSON object payload and return empty dict when invalid."""
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     @staticmethod
     def _build_action_plan(

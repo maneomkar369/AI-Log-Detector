@@ -22,6 +22,7 @@ class ThreatType(str, enum.Enum):
     DEVICE_MISUSE = "DEVICE_MISUSE"
     MALWARE_MIMICRY = "MALWARE_MIMICRY"
     INSIDER_THREAT = "INSIDER_THREAT"
+    PHISHING = "PHISHING"
 
 
 @dataclass
@@ -34,6 +35,7 @@ class AnomalyResult:
     confidence: float                 # 0.0-1.0
     threat_type: ThreatType
     message: str
+    feature_contributions: Optional[dict[int, float]] = None
 
 
 class AnomalyDetector:
@@ -91,10 +93,25 @@ class AnomalyDetector:
             # Compute inverse for Mahalanobis distance
             cov_inv = np.linalg.inv(reg_cov)
             diff = feature_vector - baseline_mean
-            distance = float(np.sqrt(diff @ cov_inv @ diff))
+            
+            # Distance squared is diff^T @ inv_cov @ diff
+            # Feature contribution approximation: | diff * (inv_cov @ diff) |
+            transformed_diff = cov_inv @ diff
+            contribs = np.abs(diff * transformed_diff)
+            total_c = np.sum(contribs)
+            
+            feature_contributions = {}
+            if total_c > 0:
+                normalized_c = contribs / total_c
+                # Top 5 indices
+                top_indices = np.argsort(normalized_c)[-5:][::-1]
+                feature_contributions = {int(i): float(normalized_c[i]) for i in top_indices if normalized_c[i] > 0.05}
+                
+            distance = float(np.sqrt(np.sum(diff * transformed_diff)))
         except np.linalg.LinAlgError:
             # Fallback to Euclidean if covariance is degenerate
             distance = float(np.linalg.norm(feature_vector - baseline_mean))
+            feature_contributions = {}
 
         # Dynamic threshold
         threshold = distance_mean + self.k * max(distance_std, 0.1)
@@ -131,6 +148,7 @@ class AnomalyDetector:
             confidence=round(confidence, 3),
             threat_type=threat_type,
             message=message,
+            feature_contributions=feature_contributions if 'feature_contributions' in locals() else None,
         )
 
     def _classify_threat(

@@ -9,6 +9,7 @@ import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -18,12 +19,37 @@ from models.alert import Alert
 from models.device import Device
 from services.alert_manager import AlertManager
 from services.action_executor import ActionExecutor
+from services.federated_learning import FederatedLearningCoordinator
 
 router = APIRouter(prefix="/api", tags=["API"])
 logger = logging.getLogger(__name__)
 
 alert_manager = AlertManager()
 action_executor = ActionExecutor()
+fl_coordinator = FederatedLearningCoordinator(
+    min_updates_per_round=settings.fl_min_updates_per_round,
+    max_delta_dim=settings.fl_max_delta_dim,
+)
+
+
+class FLRegisterRequest(BaseModel):
+    device_id: str
+    client_id: str | None = None
+    capabilities: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FLUpdateRequest(BaseModel):
+    client_id: str
+    round_id: int = Field(ge=1)
+    base_model_version: int = Field(ge=1)
+    num_samples: int = Field(ge=1)
+    weights_delta: list[float] = Field(min_length=1)
+    metrics: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FLAggregateRequest(BaseModel):
+    round_id: int | None = Field(default=None, ge=1)
+    force: bool = False
 
 
 def _parse_actions(raw_actions: str | None) -> list:
@@ -36,7 +62,18 @@ def _parse_actions(raw_actions: str | None) -> list:
     return parsed if isinstance(parsed, list) else []
 
 
+def _parse_json_object(raw_payload: str | None) -> Dict[str, Any]:
+    if not raw_payload:
+        return {}
+    try:
+        parsed = json.loads(raw_payload)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 def _serialize_alert(alert: Alert) -> Dict[str, Any]:
+    explanation = _parse_json_object(alert.xai_explanation)
     return {
         "type": "alert",
         "anomalyId": alert.anomaly_id,
@@ -50,6 +87,8 @@ def _serialize_alert(alert: Alert) -> Dict[str, Any]:
         "confidence": alert.confidence,
         "mahalanobisDistance": alert.mahalanobis_distance,
         "actions": _parse_actions(alert.actions),
+        "xaiExplanation": explanation,
+        "xai_explanation": explanation,
         "status": alert.status,
         "createdAt": alert.created_at.isoformat() if alert.created_at else None,
         "respondedAt": alert.responded_at.isoformat() if alert.responded_at else None,
@@ -174,3 +213,55 @@ async def get_device_stats(
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "ok", "service": "behavioral-anomaly-detector"}
+
+
+# ────────────────── Federated Learning (Scaffold) ──────────────────
+
+@router.post("/fl/register")
+async def fl_register(payload: FLRegisterRequest):
+    """Register a federated client and receive round/model metadata."""
+    try:
+        return await fl_coordinator.register_client(
+            device_id=payload.device_id,
+            client_id=payload.client_id,
+            capabilities=payload.capabilities,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/fl/model")
+async def fl_get_model(client_id: str | None = None):
+    """Fetch current global model payload for FL participants."""
+    return await fl_coordinator.get_model(client_id=client_id)
+
+
+@router.post("/fl/update")
+async def fl_submit_update(payload: FLUpdateRequest):
+    """Submit a local model delta for the current federated round."""
+    try:
+        return await fl_coordinator.submit_update(
+            client_id=payload.client_id,
+            round_id=payload.round_id,
+            base_model_version=payload.base_model_version,
+            num_samples=payload.num_samples,
+            weights_delta=payload.weights_delta,
+            metrics=payload.metrics,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/fl/aggregate")
+async def fl_aggregate(payload: FLAggregateRequest):
+    """Aggregate queued local updates into a new global model version."""
+    return await fl_coordinator.aggregate(
+        round_id=payload.round_id,
+        force=payload.force,
+    )
+
+
+@router.get("/fl/status")
+async def fl_status():
+    """Inspect federated coordinator state for operational visibility."""
+    return await fl_coordinator.get_status()

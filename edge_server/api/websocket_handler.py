@@ -9,6 +9,7 @@ the analysis pipeline.
 import json
 import logging
 import re
+from collections import Counter
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -21,10 +22,12 @@ from models.database import async_session
 from models.device import Device
 from models.behavior_event import BehaviorEvent
 from services.feature_extractor import FeatureExtractor
-from services.anomaly_detector import AnomalyDetector
+from services.anomaly_detector import AnomalyDetector, AnomalyResult
 from services.baseline_manager import BaselineManager
 from services.alert_manager import AlertManager
 from services.redis_buffer import RedisBuffer
+from services.phishing_analyzer import PhishingAnalyzer
+from services.xai_engine import explain_feature_contributions
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,11 @@ class ConnectionManager:
         self.anomaly_detector = AnomalyDetector()
         self.baseline_manager = BaselineManager()
         self.alert_manager = AlertManager()
+        self.phishing_analyzer = PhishingAnalyzer(
+            alert_threshold=settings.phishing_alert_threshold,
+            suspicious_threshold=settings.phishing_suspicious_threshold,
+            safe_browsing_api_key=settings.safe_browsing_api_key,
+        )
         # Deduplicate immediate indicator alerts (e.g., same malicious app/domain repeated).
         self._indicator_alert_cache: Dict[str, float] = {}
 
@@ -156,6 +164,15 @@ class ConnectionManager:
             and self._should_emit_indicator_alert(device_id, immediate_rule_alert)
         ):
             await self._emit_rule_alert(device_id, immediate_rule_alert, normalized, source="rule-immediate")
+
+        # ── Fast-path: Canary file access ──
+        await self._check_canary_fast_path(device_id, normalized)
+
+        # ── Fast-path: Phishing URL detection ──
+        await self._check_phishing_fast_path(device_id, normalized)
+
+        # ── Fast-path: Permission access alerts (side-loaded apps) ──
+        await self._check_permission_fast_path(device_id, normalized)
 
         # Buffer events in Redis
         for ev in normalized:
@@ -308,6 +325,19 @@ class ConnectionManager:
                         alert_confidence = max(alert_confidence, float(rule_alert["confidence"]))
                     alert_source = "model+rule"
 
+                xai_explanation = self._build_xai_explanation(
+                    events=events,
+                    detection=detection,
+                    rule_alert=rule_alert,
+                    alert_source=alert_source,
+                    selected_threat_type=alert_threat_type,
+                    selected_severity=alert_severity,
+                    selected_message=alert_message,
+                    selected_confidence=alert_confidence,
+                    selected_distance=alert_distance,
+                    selected_threshold=detection.threshold,
+                )
+
                 alert = self.alert_manager.create_alert(
                     device_id=device_id,
                     severity=alert_severity,
@@ -317,6 +347,7 @@ class ConnectionManager:
                     mahalanobis_distance=alert_distance,
                     target_package=action_targets.get("target_package"),
                     target_uid=action_targets.get("target_uid"),
+                    xai_explanation=xai_explanation,
                 )
                 async with async_session() as alert_db:
                     await self.alert_manager.save_alert(alert_db, alert)
@@ -387,6 +418,18 @@ class ConnectionManager:
             mahalanobis_distance=0.0,
             target_package=action_targets.get("target_package"),
             target_uid=action_targets.get("target_uid"),
+            xai_explanation=self._build_xai_explanation(
+                events=events,
+                detection=None,
+                rule_alert=rule_alert,
+                alert_source=source,
+                selected_threat_type=str(rule_alert["threat_type"]),
+                selected_severity=int(rule_alert["severity"]),
+                selected_message=str(rule_alert["message"]),
+                selected_confidence=float(rule_alert["confidence"]),
+                selected_distance=0.0,
+                selected_threshold=None,
+            ),
         )
 
         async with async_session() as alert_db:
@@ -408,6 +451,315 @@ class ConnectionManager:
             int(rule_alert["severity"]),
             float(rule_alert["confidence"]),
         )
+
+    async def _check_phishing_fast_path(
+        self,
+        device_id: str,
+        events: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Fast-path phishing detection for WEB_DOMAIN events.
+
+        Runs the PhishingAnalyzer on any incoming web domain event and
+        emits an immediate alert if the risk score exceeds the threshold.
+        """
+        for ev in events:
+            if str(ev.get("event_type", "")).upper() != "WEB_DOMAIN":
+                continue
+
+            data = self._parse_event_data(ev)
+            domain = str(data.get("domain", "")).strip().lower()
+            url = data.get("url")
+
+            if not domain:
+                continue
+
+            result = self.phishing_analyzer.analyze(domain, url)
+
+            if result.classification == "safe":
+                continue
+
+            # Build indicator key for cooldown dedup
+            indicator_key = f"phishing:{domain}"
+            phishing_alert = {
+                "severity": 9 if result.classification == "phishing" else 6,
+                "threat_type": "PHISHING",
+                "message": (
+                    f"{'⚠ Phishing' if result.classification == 'phishing' else 'Suspicious'} "
+                    f"website detected: {domain}"
+                    + (f" (impersonating {result.matched_brand})" if result.matched_brand else "")
+                    + f" — risk score {result.risk_score:.0%}"
+                ),
+                "confidence": result.risk_score,
+                "indicator": indicator_key,
+                "target_package": ev.get("package_name"),
+            }
+
+            if not self._should_emit_indicator_alert(device_id, phishing_alert):
+                continue
+
+            logger.warning(
+                "PHISHING detected: device=%s domain=%s score=%.2f brand=%s reasons=%s",
+                device_id, domain, result.risk_score,
+                result.matched_brand, result.reasons,
+            )
+            await self._emit_rule_alert(
+                device_id, phishing_alert, events, source="phishing-analyzer",
+            )
+
+    async def _check_permission_fast_path(
+        self,
+        device_id: str,
+        events: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Fast-path permission access detection.
+
+        Side-loaded apps accessing camera/mic/location trigger immediate
+        alerts without waiting for the analysis window.
+        """
+        for ev in events:
+            if str(ev.get("event_type", "")).upper() != "PERMISSION_ACCESS":
+                continue
+
+            data = self._parse_event_data(ev)
+            permission = str(data.get("permission", "")).upper()
+            is_side_loaded = bool(data.get("isSideLoaded", False))
+            pkg = str(data.get("packageName", ev.get("package_name", "unknown")))
+
+            # Only fast-path for side-loaded apps accessing sensitive permissions
+            if not is_side_loaded:
+                continue
+            if permission not in ("CAMERA", "RECORD_AUDIO", "FINE_LOCATION", "COARSE_LOCATION"):
+                continue
+
+            if permission in ("CAMERA", "RECORD_AUDIO"):
+                severity = 8
+                threat_type = "INSIDER_THREAT"
+                perm_label = permission.lower().replace("_", " ")
+                message = (
+                    f"⚠ Side-loaded app '{pkg}' accessed {perm_label} — "
+                    f"potential surveillance risk"
+                )
+            else:
+                severity = 7
+                threat_type = "DEVICE_MISUSE"
+                message = f"Side-loaded app '{pkg}' accessed location data"
+
+            perm_alert = {
+                "severity": severity,
+                "threat_type": threat_type,
+                "message": message,
+                "confidence": 0.90,
+                "indicator": f"perm:{pkg}:{permission}",
+                "target_package": pkg,
+            }
+
+            if not self._should_emit_indicator_alert(device_id, perm_alert):
+                continue
+
+            logger.warning(
+                "PERMISSION alert: device=%s pkg=%s perm=%s sideLoaded=%s",
+                device_id, pkg, permission, is_side_loaded,
+            )
+            await self._emit_rule_alert(
+                device_id, perm_alert, events, source="permission-monitor",
+            )
+
+    async def _check_canary_fast_path(
+        self,
+        device_id: str,
+        events: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Fast-path canary file access detection.
+
+        Any interaction with a honey file triggers a critical Severity 10 alert.
+        """
+        for ev in events:
+            if str(ev.get("event_type", "")).upper() != "CANARY_FILE_ACCESS":
+                continue
+
+            data = self._parse_event_data(ev)
+            file_name = str(data.get("fileName", "unknown"))
+            action = str(data.get("action", "ACCESS"))
+
+            canary_alert = {
+                "severity": 10,
+                "threat_type": "MALWARE_MIMICRY",
+                "message": f"CRITICAL: Unauthorized {action} of decoy document '{file_name}' detected. Possible Ransomware/Spyware.",
+                "confidence": 0.99,
+                "indicator": f"canary:{file_name}",
+            }
+
+            if not self._should_emit_indicator_alert(device_id, canary_alert):
+                continue
+
+            logger.critical(
+                "CANARY TRIGGERED: device=%s file=%s action=%s",
+                device_id, file_name, action,
+            )
+            await self._emit_rule_alert(
+                device_id, canary_alert, events, source="canary-manager",
+            )
+
+    @staticmethod
+    def _window_span_seconds(events: List[Dict[str, Any]]) -> Optional[float]:
+        """Return event window timespan in seconds when timestamps are present."""
+        timestamps: List[float] = []
+        for ev in events:
+            raw = ev.get("timestamp")
+            try:
+                ts = float(raw)
+            except (TypeError, ValueError):
+                continue
+            if ts <= 0:
+                continue
+            # Android payloads are usually epoch milliseconds.
+            if ts > 10_000_000_000:
+                ts /= 1000.0
+            timestamps.append(ts)
+
+        if len(timestamps) < 2:
+            return None
+
+        span = max(timestamps) - min(timestamps)
+        return round(max(span, 0.0), 3)
+
+    @staticmethod
+    def _top_event_types(events: List[Dict[str, Any]], limit: int = 3) -> List[Dict[str, Any]]:
+        """Return top event types in the current analysis window."""
+        counts: Counter[str] = Counter(
+            str(ev.get("event_type", "UNKNOWN")).upper() for ev in events
+        )
+        return [
+            {"event_type": event_type, "count": count}
+            for event_type, count in counts.most_common(max(limit, 1))
+        ]
+
+    @staticmethod
+    def _dominant_package(events: List[Dict[str, Any]]) -> Optional[str]:
+        """Return the most frequently observed package in the current window."""
+        package_counts: Counter[str] = Counter()
+
+        for ev in events:
+            data = ConnectionManager._parse_event_data(ev)
+            package_candidates = [
+                ev.get("package_name"),
+                data.get("package"),
+                data.get("packageName"),
+                data.get("targetPackage"),
+                data.get("processName"),
+            ]
+
+            for candidate in package_candidates:
+                if not isinstance(candidate, str):
+                    continue
+                package_name = candidate.strip().lower()
+                if not package_name or ConnectionManager._is_ignored_package(package_name):
+                    continue
+                package_counts[package_name] += 1
+
+        if not package_counts:
+            return None
+        return package_counts.most_common(1)[0][0]
+
+    @staticmethod
+    def _build_xai_explanation(
+        events: List[Dict[str, Any]],
+        detection: Optional[AnomalyResult],
+        rule_alert: Optional[Dict[str, Any]],
+        alert_source: str,
+        selected_threat_type: str,
+        selected_severity: int,
+        selected_message: str,
+        selected_confidence: float,
+        selected_distance: float,
+        selected_threshold: Optional[float],
+    ) -> Dict[str, Any]:
+        """Build a concise, structured explanation payload for each alert."""
+        event_count = len(events)
+        span_seconds = ConnectionManager._window_span_seconds(events)
+        top_event_types = ConnectionManager._top_event_types(events, limit=3)
+        dominant_package = ConnectionManager._dominant_package(events)
+        indicator = str(rule_alert.get("indicator", "")).strip() if rule_alert else ""
+
+        threshold_value = (
+            float(selected_threshold)
+            if selected_threshold is not None
+            else (float(detection.threshold) if detection is not None else 0.0)
+        )
+        has_model_context = detection is not None and threshold_value > 0
+        distance_ratio = (
+            round(float(selected_distance) / threshold_value, 3)
+            if has_model_context
+            else None
+        )
+
+        if has_model_context and distance_ratio is not None:
+            summary = (
+                f"{selected_threat_type} risk: {event_count} events in this window; "
+                f"distance {selected_distance:.2f} vs threshold {threshold_value:.2f} "
+                f"({distance_ratio:.2f}x), confidence {selected_confidence:.2f}."
+            )
+        elif indicator:
+            summary = (
+                f"{selected_threat_type} risk: matched indicator {indicator} "
+                f"across {event_count} recent events (confidence {selected_confidence:.2f})."
+            )
+        else:
+            summary = (
+                f"{selected_threat_type} risk: {event_count} recent events triggered "
+                f"security rules (confidence {selected_confidence:.2f})."
+            )
+
+        factors: List[str] = []
+        if has_model_context and distance_ratio is not None:
+            factors.append(
+                f"Model anomaly score crossed threshold ({selected_distance:.2f} > {threshold_value:.2f})."
+            )
+            # Add detailed Mahalanobis feature contributions using XAI engine
+            if hasattr(detection, "feature_contributions") and detection.feature_contributions:
+                feature_explanations = explain_feature_contributions(detection.feature_contributions)
+                factors.extend(feature_explanations)
+                
+        if indicator:
+            factors.append(f"Matched configured threat indicator: {indicator}.")
+        if dominant_package:
+            factors.append(f"Dominant package in window: {dominant_package}.")
+        if top_event_types:
+            compact_types = ", ".join(
+                f"{item['event_type']} x{item['count']}" for item in top_event_types
+            )
+            factors.append(f"Top activity types: {compact_types}.")
+        if span_seconds is not None:
+            factors.append(f"Behavioral window span: {span_seconds:.2f}s.")
+
+        return {
+            "version": "xai-v1",
+            "summary": summary,
+            "source": alert_source,
+            "threat_type": selected_threat_type,
+            "severity": int(selected_severity),
+            "confidence": round(float(selected_confidence), 3),
+            "message": str(selected_message),
+            "factors": factors[:5],
+            "window": {
+                "event_count": event_count,
+                "span_seconds": span_seconds,
+                "top_event_types": top_event_types,
+                "dominant_package": dominant_package,
+            },
+            "model": {
+                "distance": round(float(selected_distance), 4),
+                "threshold": round(float(threshold_value), 4) if has_model_context else None,
+                "distance_ratio": distance_ratio,
+            },
+            "rule": {
+                "indicator": indicator or None,
+                "rule_message": str(rule_alert.get("message", "")) if rule_alert else None,
+            },
+        }
 
     @staticmethod
     def _parse_event_data(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -634,6 +986,58 @@ class ConnectionManager:
             }
             if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
                 rule_alert = candidate
+
+        # ── Permission Access Rules ──
+        permission_events = [
+            ev for ev in events
+            if str(ev.get("event_type", "")).upper() == "PERMISSION_ACCESS"
+        ]
+        for ev in permission_events:
+            data = ConnectionManager._parse_event_data(ev)
+            permission = str(data.get("permission", "")).upper()
+            is_side_loaded = bool(data.get("isSideLoaded", False))
+            pkg = str(data.get("packageName", ev.get("package_name", "unknown")))
+
+            if is_side_loaded and permission in ("CAMERA", "RECORD_AUDIO"):
+                candidate = {
+                    "severity": 8,
+                    "threat_type": "INSIDER_THREAT",
+                    "message": (
+                        f"Side-loaded app '{pkg}' accessed {permission.lower().replace('_', ' ')} — "
+                        f"potential surveillance risk"
+                    ),
+                    "confidence": 0.90,
+                    "indicator": f"perm:{pkg}:{permission}",
+                    "target_package": pkg,
+                }
+                if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                    rule_alert = candidate
+
+            elif is_side_loaded and permission in ("FINE_LOCATION", "COARSE_LOCATION"):
+                candidate = {
+                    "severity": 7,
+                    "threat_type": "DEVICE_MISUSE",
+                    "message": (
+                        f"Side-loaded app '{pkg}' accessed location data"
+                    ),
+                    "confidence": 0.85,
+                    "indicator": f"perm:{pkg}:{permission}",
+                    "target_package": pkg,
+                }
+                if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                    rule_alert = candidate
+
+            elif not is_side_loaded and permission in ("CAMERA", "RECORD_AUDIO"):
+                candidate = {
+                    "severity": 5,
+                    "threat_type": "DEVICE_MISUSE",
+                    "message": (
+                        f"Third-party app '{pkg}' accessed {permission.lower().replace('_', ' ')}"
+                    ),
+                    "confidence": 0.65,
+                }
+                if rule_alert is None or candidate["severity"] >= rule_alert["severity"]:
+                    rule_alert = candidate
 
         return rule_alert
 

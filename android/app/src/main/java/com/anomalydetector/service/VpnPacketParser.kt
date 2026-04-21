@@ -13,6 +13,7 @@ data class ParsedPacket(
     val srcPort: Int?,
     val dstPort: Int?,
     val bytes: Int,
+    val dnsQuery: String? = null
 )
 
 object VpnPacketParser {
@@ -43,6 +44,20 @@ object VpnPacketParser {
             dstPort = (u8(buffer[ihl + 2]) shl 8) or u8(buffer[ihl + 3])
         }
 
+        var dnsQuery: String? = null
+        if (protocolNumber == 17 && dstPort == 53 && length >= ihl + 8 + 12) {
+            val udpPayloadOffset = ihl + 8
+            val flags = (u8(buffer[udpPayloadOffset + 2]) shl 8) or u8(buffer[udpPayloadOffset + 3])
+            val isQuery = (flags and 0x8000) == 0
+            if (isQuery) {
+                try {
+                    dnsQuery = parseDnsQname(buffer, udpPayloadOffset + 12, length)
+                } catch (e: Exception) {
+                    // Ignore malformed DNS
+                }
+            }
+        }
+
         return ParsedPacket(
             protocol = protocol,
             srcIp = srcIp,
@@ -50,7 +65,28 @@ object VpnPacketParser {
             srcPort = srcPort,
             dstPort = dstPort,
             bytes = length,
+            dnsQuery = dnsQuery
         )
+    }
+
+    private fun parseDnsQname(buffer: ByteArray, offset: Int, length: Int): String? {
+        var current = offset
+        val sb = StringBuilder()
+        var jumps = 0
+        while (current < length && jumps < 10) {
+            val len = u8(buffer[current])
+            if (len == 0) break
+            if ((len and 0xC0) == 0xC0) break // Ignore compression in simple parser
+            if (sb.isNotEmpty()) sb.append(".")
+            current++
+            if (current + len > length) return null
+            for (i in 0 until len) {
+                sb.append(buffer[current + i].toInt().toChar())
+            }
+            current += len
+            jumps++
+        }
+        return if (sb.isNotEmpty()) sb.toString() else null
     }
 
     private fun ipv4(buffer: ByteArray, offset: Int): String {

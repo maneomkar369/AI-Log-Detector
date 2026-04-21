@@ -42,6 +42,8 @@ class MonitoringService : Service() {
     private var totalRxBaseline = -1L
     private var totalTxBaseline = -1L
     private var receiversRegistered = false
+    private var permissionMonitor: PermissionMonitor? = null
+    private var canaryManager: CanaryManager? = null
 
     private val authReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -111,6 +113,7 @@ class MonitoringService : Service() {
         scope.cancel()
         webSocketClient?.disconnect()
         unregisterSecurityReceivers()
+        canaryManager?.stop()
         updateConnectionStatus("Disconnected")
         super.onDestroy()
     }
@@ -118,6 +121,11 @@ class MonitoringService : Service() {
     private fun startMonitoring() {
         // Log network connectivity status
         WiFiConnectivityMonitor.logNetworkStatus(this)
+
+        // Initialize permission and canary monitors
+        permissionMonitor = PermissionMonitor(this, database)
+        canaryManager = CanaryManager(this, database)
+        canaryManager?.start()
         
         // Connect WebSocket
         val deviceId = android.provider.Settings.Secure.getString(
@@ -161,6 +169,7 @@ class MonitoringService : Service() {
                 val usageStats = collectUsageStats()
                 collectNetworkStats(usageStats)
                 collectSystemSnapshot()
+                permissionMonitor?.checkPermissionUsage()
                 syncEvents()
                 delay(Config.SAMPLING_INTERVAL_MS)
             }

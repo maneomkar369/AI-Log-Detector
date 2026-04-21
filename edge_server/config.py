@@ -59,6 +59,18 @@ class Settings(BaseSettings):
     ignored_alert_device_prefixes: str = "test_device_,ioc_test_"
     ignored_alert_packages: str = "com.bad.malware"
 
+    # ── Dashboard CSP ──
+    dashboard_csp_allow_unsafe_eval: bool = False
+
+    # ── Phishing / URL Threat Detection ──
+    safe_browsing_api_key: Optional[str] = None
+    phishing_alert_threshold: float = 0.7       # Risk score to trigger immediate alert
+    phishing_suspicious_threshold: float = 0.4  # Risk score for "suspicious" tagging
+
+    # ── Federated Learning (Scaffold) ──
+    fl_min_updates_per_round: int = 2
+    fl_max_delta_dim: int = 4096
+
     class Config:
         env_file = "../.env"
         env_file_encoding = "utf-8"

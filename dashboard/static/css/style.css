@@ -402,6 +402,15 @@ canvas {
     vertical-align: top;
 }
 
+.xai-note {
+    margin-top: 6px;
+    color: var(--text-soft);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    border-left: 2px solid rgba(75, 212, 255, 0.45);
+    padding-left: 8px;
+}
+
 .data-table tbody tr {
     transition: background 0.2s ease;
 }

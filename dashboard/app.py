@@ -32,6 +32,16 @@ def _parse_json_like(value: Any) -> Dict[str, Any]:
     return {}
 
 
+def _extract_xai_data(alert: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract best-effort XAI summary and factors from alert payloads."""
+    explanation = alert.get("xai_explanation", alert.get("xaiExplanation"))
+    parsed = _parse_json_like(explanation)
+    return {
+        "summary": str(parsed.get("summary", "")).strip() or None,
+        "factors": parsed.get("factors", []) if isinstance(parsed.get("factors"), list) else []
+    }
+
+
 def _parse_datetime_from_record(record: Dict[str, Any]) -> datetime:
     for key in ("timestamp", "created_at", "_received"):
         raw = record.get(key)
@@ -116,12 +126,24 @@ def _classify_ioc_alert(alert: Dict[str, Any]) -> Optional[str]:
         return "app"
     if indicator.startswith("domain:"):
         return "domain"
+    if indicator.startswith("phishing:"):
+        return "phishing"
+    if indicator.startswith("perm:"):
+        return "permission"
+
+    threat_type = str(alert.get("threat_type", alert.get("threatType", ""))).upper()
+    if threat_type == "PHISHING":
+        return "phishing"
 
     message = str(alert.get("message", "")).strip().lower()
     if "known malicious app activity detected" in message:
         return "app"
     if "known malicious website detected" in message:
         return "domain"
+    if "phishing" in message or "suspicious website" in message:
+        return "phishing"
+    if "permission" in message and ("camera" in message or "microphone" in message or "location" in message):
+        return "permission"
 
     return None
 
@@ -547,6 +569,8 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
     ioc_total = 0
     ioc_app_total = 0
     ioc_domain_total = 0
+    phishing_total = 0
+    permission_total = 0
 
     today_distribution = {
         "anomalies": 0,
@@ -555,7 +579,8 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
         "auth_failures": 0,
     }
 
-    combined_rows = []
+    alert_rows: List[Dict[str, Any]] = []
+    event_rows: List[Dict[str, Any]] = []
 
     for alert in recent_alerts:
         dt = _parse_datetime_from_record(alert)
@@ -580,19 +605,27 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
         elif ioc_type == "domain":
             ioc_total += 1
             ioc_domain_total += 1
+        elif ioc_type == "phishing":
+            ioc_total += 1
+            phishing_total += 1
+        elif ioc_type == "permission":
+            permission_total += 1
 
         if day == today:
             today_distribution["anomalies"] += 1
             if severity >= 9:
                 today_distribution["critical"] += 1
 
-        combined_rows.append(
+        xai_data = _extract_xai_data(alert)
+        alert_rows.append(
             {
                 "time": dt.isoformat(),
                 "source": "ALERT",
                 "device_id": device_id,
                 "event_type": threat_type,
                 "message": str(alert.get("message", "No message")),
+                "xai_summary": xai_data["summary"],
+                "xai_factors": xai_data["factors"],
                 "severity_score": severity,
                 "severity": _severity_label(severity),
                 "ioc_type": ioc_type or "none",
@@ -627,7 +660,7 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
 
         payload = _parse_json_like(event.get("data"))
         payload_preview = json.dumps(payload) if payload else str(event.get("data", ""))
-        combined_rows.append(
+        event_rows.append(
             {
                 "time": dt.isoformat(),
                 "source": "EVENT",
@@ -640,7 +673,12 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
             }
         )
 
-    combined_rows.sort(key=lambda row: row["time"], reverse=True)
+    # Keep alert visibility stable under heavy event volume.
+    combined_rows = sorted(
+        alert_rows[:10] + event_rows[:20],
+        key=lambda row: row["time"],
+        reverse=True,
+    )
 
     return {
         "metrics": {
@@ -651,10 +689,12 @@ def _build_dashboard_summary(recent_events: List[Dict[str, Any]], recent_alerts:
             "ioc_alerts": ioc_total,
             "ioc_app_alerts": ioc_app_total,
             "ioc_domain_alerts": ioc_domain_total,
+            "phishing_alerts": phishing_total,
+            "permission_alerts": permission_total,
         },
         "trend": trend,
         "today_distribution": today_distribution,
-        "recent_events": combined_rows[:30],
+        "recent_events": combined_rows,
     }
 
 
@@ -662,7 +702,7 @@ def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("DASHBOARD_SECRET_KEY", "dev-secret")
 
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
 
     recent_events: List[Dict[str, Any]] = []
     recent_alerts: List[Dict[str, Any]] = []

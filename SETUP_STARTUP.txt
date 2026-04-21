@@ -68,6 +68,10 @@ var SERVER_URL = "wss://YOUR_NGROK_DOMAIN/ws"
 
 Then run the app and grant required permissions.
 
+Android Gradle checks (uses Java 17 automatically):
+bash scripts/android_gradle.sh test
+bash scripts/android_gradle.sh assembleDebug
+
 ----------------------------------------
 7) DAILY STARTUP ORDER
 ----------------------------------------

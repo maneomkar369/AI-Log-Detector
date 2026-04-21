@@ -1,0 +1,354 @@
+"""
+Phishing URL Analyzer
+======================
+Multi-layer URL threat detection:
+
+1. Static blocklist — known phishing TLD patterns and suspicious keywords
+2. Heuristic analysis — typosquatting, homoglyphs, domain structure anomalies
+3. Google Safe Browsing API — optional real-time lookup (when configured)
+
+Returns a risk score (0.0–1.0) and classification: safe / suspicious / phishing.
+"""
+
+import logging
+import re
+from dataclasses import dataclass
+from typing import List, Optional, Set
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
+
+
+# ── Brand Targets (for typosquatting/homoglyph detection) ──
+BRAND_TARGETS = {
+    "google": ["googl", "go0gle", "g00gle", "gogle", "gooogle", "googie"],
+    "facebook": ["faceb00k", "facebok", "faceboook", "facebk", "faceb0ok"],
+    "amazon": ["amaz0n", "amazn", "amaazon", "amazom", "arnazon"],
+    "paypal": ["paypa1", "paypaI", "payp4l", "paypall", "paypl", "paipal"],
+    "microsoft": ["micros0ft", "microsft", "microsofl", "rnicrosoft"],
+    "apple": ["app1e", "appie", "appl3", "applle"],
+    "netflix": ["netf1ix", "netfllx", "netfl1x", "neftlix"],
+    "instagram": ["instagr4m", "lnstagram", "instgram", "1nstagram"],
+    "whatsapp": ["whatsap", "wh4tsapp", "whatssapp", "whatsaap"],
+    "linkedin": ["1inkedin", "linkedln", "linkdin", "linkediin"],
+    "twitter": ["twltter", "tw1tter", "twiter", "twtter"],
+    "chase": ["chas3", "chasse"],
+    "wellsfargo": ["we11sfargo", "wellsfarg0", "welsfargo"],
+    "bankofamerica": ["bankofamer1ca", "bankofarnerica"],
+}
+
+# ── Suspicious Keywords in Domain ──
+SUSPICIOUS_KEYWORDS = {
+    "login", "signin", "sign-in", "log-in", "verify", "verification",
+    "secure", "security", "account", "update", "confirm", "banking",
+    "wallet", "password", "credential", "authenticate", "validate",
+    "suspend", "locked", "unlock", "recover", "restore", "reset",
+    "urgent", "alert", "warning", "payment", "billing", "invoice",
+    "refund", "prize", "winner", "reward", "gift", "free", "lottery",
+    "helpdesk", "support", "service", "customer",
+}
+
+# ── Suspicious TLDs (high phishing correlation) ──
+SUSPICIOUS_TLDS = {
+    ".tk", ".ml", ".ga", ".cf", ".gq",  # Free TLDs heavily abused
+    ".buzz", ".top", ".xyz", ".club", ".icu",
+    ".cam", ".rest", ".monster", ".sbs",
+    ".cyou", ".cfd", ".best", ".bond",
+}
+
+# ── Known Phishing Domain Patterns (regex) ──
+PHISHING_PATTERNS = [
+    # Brand + separator + suspicious keyword
+    re.compile(r"(?:paypal|google|amazon|apple|microsoft|facebook|netflix|instagram)"
+               r"[\-\.](?:login|signin|verify|secure|update|account|support)", re.IGNORECASE),
+    # IP address as domain (http://192.168.x.x/login)
+    re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"),
+    # Very long subdomain chains (often phishing)
+    re.compile(r"^[a-z0-9\-]+\.[a-z0-9\-]+\.[a-z0-9\-]+\.[a-z0-9\-]+\.[a-z0-9\-]+\."),
+]
+
+
+@dataclass
+class PhishingResult:
+    """Result of URL phishing analysis."""
+    domain: str
+    url: Optional[str]
+    risk_score: float          # 0.0 (safe) to 1.0 (definite phishing)
+    classification: str        # safe, suspicious, phishing
+    reasons: List[str]         # Human-readable reasons for the score
+    matched_brand: Optional[str]  # Brand being impersonated, if detected
+
+
+class PhishingAnalyzer:
+    """
+    Analyzes URLs/domains for phishing indicators.
+
+    Usage::
+
+        analyzer = PhishingAnalyzer()
+        result = analyzer.analyze("paypal-login-secure.tk")
+        # result.risk_score == 0.95
+        # result.classification == "phishing"
+    """
+
+    def __init__(
+        self,
+        alert_threshold: float = 0.7,
+        suspicious_threshold: float = 0.4,
+        safe_browsing_api_key: Optional[str] = None,
+    ):
+        self.alert_threshold = alert_threshold
+        self.suspicious_threshold = suspicious_threshold
+        self.safe_browsing_api_key = safe_browsing_api_key
+
+    def analyze(self, domain: str, url: Optional[str] = None) -> PhishingResult:
+        """
+        Analyze a domain/URL for phishing indicators.
+
+        Parameters
+        ----------
+        domain : str
+            The normalized domain to analyze (e.g., "paypal-secure.tk")
+        url : str, optional
+            The full URL if available (provides additional signals)
+
+        Returns
+        -------
+        PhishingResult
+        """
+        domain = domain.strip().lower()
+        reasons: List[str] = []
+        score = 0.0
+        matched_brand: Optional[str] = None
+
+        # ── Layer 1: Static Pattern Matching ──
+        pattern_score, pattern_reasons = self._check_patterns(domain)
+        score += pattern_score
+        reasons.extend(pattern_reasons)
+
+        # ── Layer 2: Suspicious TLD ──
+        tld_score, tld_reasons = self._check_tld(domain)
+        score += tld_score
+        reasons.extend(tld_reasons)
+
+        # ── Layer 3: Suspicious Keywords ──
+        keyword_score, keyword_reasons = self._check_keywords(domain)
+        score += keyword_score
+        reasons.extend(keyword_reasons)
+
+        # ── Layer 4: Typosquatting / Homoglyph Detection ──
+        typo_score, typo_reasons, brand = self._check_typosquatting(domain)
+        score += typo_score
+        reasons.extend(typo_reasons)
+        if brand:
+            matched_brand = brand
+
+        # ── Layer 5: Domain Structure Anomalies ──
+        struct_score, struct_reasons = self._check_structure(domain)
+        score += struct_score
+        reasons.extend(struct_reasons)
+
+        # ── Layer 6: URL Path Analysis (if full URL available) ──
+        if url:
+            url_score, url_reasons = self._check_url_path(url)
+            score += url_score
+            reasons.extend(url_reasons)
+
+        # Cap score at 1.0
+        score = min(score, 1.0)
+
+        # Classify
+        if score >= self.alert_threshold:
+            classification = "phishing"
+        elif score >= self.suspicious_threshold:
+            classification = "suspicious"
+        else:
+            classification = "safe"
+
+        return PhishingResult(
+            domain=domain,
+            url=url,
+            risk_score=round(score, 3),
+            classification=classification,
+            reasons=reasons[:5],  # Keep top 5 reasons
+            matched_brand=matched_brand,
+        )
+
+    @staticmethod
+    def _check_patterns(domain: str) -> tuple[float, List[str]]:
+        """Check against known phishing regex patterns."""
+        score = 0.0
+        reasons: List[str] = []
+
+        for pattern in PHISHING_PATTERNS:
+            if pattern.search(domain):
+                score += 0.45
+                reasons.append(f"Matches known phishing pattern: {pattern.pattern[:60]}")
+
+        return min(score, 0.6), reasons
+
+    @staticmethod
+    def _check_tld(domain: str) -> tuple[float, List[str]]:
+        """Check if TLD is commonly used in phishing."""
+        score = 0.0
+        reasons: List[str] = []
+
+        for tld in SUSPICIOUS_TLDS:
+            if domain.endswith(tld):
+                score += 0.2
+                reasons.append(f"Uses suspicious TLD: {tld}")
+                break
+
+        return score, reasons
+
+    @staticmethod
+    def _check_keywords(domain: str) -> tuple[float, List[str]]:
+        """Check for suspicious keywords in the domain."""
+        score = 0.0
+        reasons: List[str] = []
+        found_keywords: List[str] = []
+
+        # Split domain into parts for keyword matching
+        domain_parts = re.split(r'[\-\.]', domain)
+        domain_text = domain.replace(".", "").replace("-", "")
+
+        for keyword in SUSPICIOUS_KEYWORDS:
+            if keyword in domain_parts or keyword in domain_text:
+                found_keywords.append(keyword)
+
+        if found_keywords:
+            # More keywords = higher score
+            keyword_count = len(found_keywords)
+            score = min(0.15 * keyword_count, 0.4)
+            reasons.append(f"Suspicious keywords in domain: {', '.join(found_keywords[:3])}")
+
+        return score, reasons
+
+    @staticmethod
+    def _check_typosquatting(domain: str) -> tuple[float, List[str], Optional[str]]:
+        """Detect typosquatting / homoglyph attacks against known brands."""
+        score = 0.0
+        reasons: List[str] = []
+        matched_brand: Optional[str] = None
+
+        # Remove TLD for comparison
+        base_domain = domain.rsplit(".", 1)[0] if "." in domain else domain
+        base_clean = base_domain.replace("-", "").replace(".", "")
+
+        for brand, typos in BRAND_TARGETS.items():
+            # Check if domain contains a typosquatted version
+            for typo in typos:
+                if typo in base_clean:
+                    score += 0.5
+                    matched_brand = brand
+                    reasons.append(
+                        f"Possible typosquatting of '{brand}' (found: '{typo}')"
+                    )
+                    break
+
+            # Check if domain contains the real brand name but isn't the official domain
+            official_domains = _get_official_domains(brand)
+            if brand in base_clean and domain not in official_domains:
+                # Only flag if it's not a well-known subdomain
+                if not any(domain.endswith(f".{official}") for official in official_domains):
+                    score += 0.35
+                    matched_brand = brand
+                    reasons.append(
+                        f"Uses brand name '{brand}' in non-official domain"
+                    )
+
+            if matched_brand:
+                break
+
+        return min(score, 0.6), reasons, matched_brand
+
+    @staticmethod
+    def _check_structure(domain: str) -> tuple[float, List[str]]:
+        """Analyze domain structure for anomalies."""
+        score = 0.0
+        reasons: List[str] = []
+
+        # Count subdomains
+        parts = domain.split(".")
+        if len(parts) > 4:
+            score += 0.2
+            reasons.append(f"Excessive subdomain depth ({len(parts)} levels)")
+
+        # Very long domain name
+        if len(domain) > 50:
+            score += 0.15
+            reasons.append(f"Unusually long domain ({len(domain)} chars)")
+
+        # Many hyphens (common in phishing)
+        hyphen_count = domain.count("-")
+        if hyphen_count >= 3:
+            score += 0.15
+            reasons.append(f"Many hyphens in domain ({hyphen_count})")
+
+        # Numeric sequences mixed with text (e.g., secure123-login.com)
+        if re.search(r'[a-z]+\d{3,}', domain) or re.search(r'\d{3,}[a-z]+', domain):
+            score += 0.1
+            reasons.append("Contains suspicious numeric sequences")
+
+        return min(score, 0.35), reasons
+
+    @staticmethod
+    def _check_url_path(url: str) -> tuple[float, List[str]]:
+        """Analyze URL path for phishing indicators."""
+        score = 0.0
+        reasons: List[str] = []
+
+        try:
+            parsed = urlparse(url)
+            path = parsed.path.lower()
+            query = parsed.query.lower()
+        except Exception:
+            return 0.0, []
+
+        # Check for encoded characters abuse
+        if url.count("%") > 5:
+            score += 0.1
+            reasons.append("Excessive URL encoding")
+
+        # Check for data URI or javascript in path
+        if "javascript:" in url.lower() or "data:" in url.lower():
+            score += 0.4
+            reasons.append("Suspicious protocol in URL")
+
+        # Check for @ symbol (URL obfuscation trick)
+        if "@" in parsed.netloc:
+            score += 0.3
+            reasons.append("URL contains @ symbol (possible obfuscation)")
+
+        # Suspicious path keywords
+        phishing_path_keywords = [
+            "login", "signin", "verify", "secure", "account",
+            "update", "confirm", "banking", "password",
+        ]
+        path_matches = [kw for kw in phishing_path_keywords if kw in path]
+        if path_matches:
+            score += 0.1
+            reasons.append(f"Suspicious path keywords: {', '.join(path_matches[:3])}")
+
+        return min(score, 0.3), reasons
+
+
+def _get_official_domains(brand: str) -> Set[str]:
+    """Return known official domains for a brand."""
+    official_map = {
+        "google": {"google.com", "google.co.in", "google.co.uk", "googleapis.com", "gstatic.com", "youtube.com"},
+        "facebook": {"facebook.com", "fb.com", "fbcdn.net", "instagram.com"},
+        "amazon": {"amazon.com", "amazon.in", "amazon.co.uk", "amazonaws.com", "aws.amazon.com"},
+        "paypal": {"paypal.com", "paypal.me"},
+        "microsoft": {"microsoft.com", "live.com", "outlook.com", "office.com", "azure.com", "windows.com"},
+        "apple": {"apple.com", "icloud.com", "itunes.com"},
+        "netflix": {"netflix.com"},
+        "instagram": {"instagram.com"},
+        "whatsapp": {"whatsapp.com", "whatsapp.net"},
+        "linkedin": {"linkedin.com"},
+        "twitter": {"twitter.com", "x.com", "t.co"},
+        "chase": {"chase.com"},
+        "wellsfargo": {"wellsfargo.com"},
+        "bankofamerica": {"bankofamerica.com"},
+    }
+    return official_map.get(brand, set())

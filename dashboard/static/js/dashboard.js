@@ -402,10 +402,29 @@ function applyRecentEventFilter() {
             <td>${escapeHtml(row.event_type || "-")}</td>
             <td><span class="severity-badge severity-${escapeHtml(severity)}">${escapeHtml(severity)}</span></td>
             <td>${renderIocBadge(iocType)}</td>
-            <td>${escapeHtml(row.message || "-")}</td>
+            <td>${renderMessageCell(row)}</td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function renderMessageCell(row) {
+    const primary = escapeHtml(row.message || "-");
+    const xaiSummary = String(row.xai_summary || "").trim();
+    const xaiFactors = Array.isArray(row.xai_factors) ? row.xai_factors : [];
+    
+    if (!xaiSummary && xaiFactors.length === 0) {
+        return primary;
+    }
+
+    let factorsHtml = "";
+    if (xaiFactors.length > 0) {
+        factorsHtml = `<ul class="xai-factors">` + 
+            xaiFactors.map(f => `<li>${escapeHtml(f)}</li>`).join("") + 
+            `</ul>`;
+    }
+
+    return `${primary}<div class="xai-note"><strong>AI Insight:</strong> ${escapeHtml(xaiSummary)}${factorsHtml}</div>`;
 }
 
 function normalizeIocType(rawValue) {

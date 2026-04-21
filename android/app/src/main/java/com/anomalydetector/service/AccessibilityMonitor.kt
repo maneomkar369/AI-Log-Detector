@@ -48,10 +48,12 @@ class AccessibilityMonitor : AccessibilityService() {
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED or
                          AccessibilityEvent.TYPE_VIEW_CLICKED or
-                         AccessibilityEvent.TYPE_VIEW_SCROLLED
+                         AccessibilityEvent.TYPE_VIEW_SCROLLED or
+                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             notificationTimeout = 100
-            flags = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+            flags = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS or
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         serviceInfo = info
         Log.i(TAG, "Accessibility monitor connected")
@@ -64,6 +66,7 @@ class AccessibilityMonitor : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> handleKeystroke(event)
             AccessibilityEvent.TYPE_VIEW_CLICKED -> handleTouch(event)
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> handleSwipe(event)
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> handleWindowContentChanged(event)
         }
     }
 
@@ -118,9 +121,18 @@ class AccessibilityMonitor : AccessibilityService() {
         event.text?.forEach { textCandidates.add(it.toString()) }
         event.contentDescription?.toString()?.let { textCandidates.add(it) }
 
+        // Try to extract full URL first, then fall back to domain
+        var fullUrl: String? = null
         val domain = textCandidates
             .asSequence()
-            .mapNotNull { extractDomain(it) }
+            .mapNotNull { candidate ->
+                // Check if it looks like a full URL
+                val trimmed = candidate.trim()
+                if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                    fullUrl = trimmed
+                }
+                extractDomain(trimmed)
+            }
             .firstOrNull()
             ?: return
 
@@ -131,20 +143,30 @@ class AccessibilityMonitor : AccessibilityService() {
         recentDomainSeenAt[domain] = now
 
         scope.launch {
+            val payload = mutableMapOf<String, Any>(
+                "domain" to domain,
+                "source" to "accessibility",
+            )
+            fullUrl?.let { payload["url"] = it }
+
             database.behaviorEventDao().insert(
                 BehaviorEvent(
                     eventType = "WEB_DOMAIN",
                     packageName = packageName,
                     timestamp = now,
-                    data = gson.toJson(
-                        mapOf(
-                            "domain" to domain,
-                            "source" to "accessibility",
-                        )
-                    )
+                    data = gson.toJson(payload)
                 )
             )
         }
+    }
+
+    /**
+     * Handle window content changes — catches URL bar updates when
+     * navigating via links (no typing involved).
+     */
+    private fun handleWindowContentChanged(event: AccessibilityEvent) {
+        val now = System.currentTimeMillis()
+        maybeCaptureWebDomain(event, now)
     }
 
     private fun extractDomain(raw: String): String? {

@@ -33,6 +33,8 @@ class Alert(Base):
     mahalanobis_distance: Mapped[Optional[float]] = mapped_column(
         Float, nullable=True
     )
+    # Structured XAI payload encoded as JSON string.
+    xai_explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Recommended actions (JSON list)
     actions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

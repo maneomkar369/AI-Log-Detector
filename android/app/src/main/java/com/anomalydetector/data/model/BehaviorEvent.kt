@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
  * Types include APP_USAGE, KEYSTROKE, TOUCH, SWIPE,
  * NETWORK_TRAFFIC, NETWORK_APP, SYSTEM_STATE,
  * SECURITY_AUTH_EVENT, SECURITY_PACKAGE_EVENT, SYSTEM_LOGCAT_ACCESS,
- * WEB_DOMAIN.
+ * WEB_DOMAIN, PERMISSION_ACCESS, CANARY_FILE_ACCESS.
  */
 @Entity(tableName = "behavior_events")
 data class BehaviorEvent(
