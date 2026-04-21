@@ -236,15 +236,25 @@ class NetworkFlowVpnService : VpnService() {
         detachedTunFd = null
     }
 
+    private val dnsProxyEngine by lazy { DnsProxyEngine(database) }
+
     private suspend fun capturePacketsLoop(iface: ParcelFileDescriptor) {
         try {
             FileInputStream(iface.fileDescriptor).use { input ->
+                val outStream = java.io.FileOutputStream(iface.fileDescriptor)
                 val buffer = ByteArray(32767)
                 while (scope.isActive && tunInterface != null) {
                     val read = input.read(buffer)
                     if (read <= 0) continue
 
                     val packet = VpnPacketParser.parse(buffer, read) ?: continue
+                    
+                    // Route DNS queries to the proxy engine
+                    if (packet.dnsQuery != null) {
+                        dnsProxyEngine.processDnsPacket(packet, buffer, read, outStream)
+                        // In strict DNS blocking mode, we might only log DNS packets.
+                    }
+
                     val key = "${packet.protocol}|${packet.dstIp}|${packet.dstPort ?: 0}"
 
                     synchronized(flowStats) {

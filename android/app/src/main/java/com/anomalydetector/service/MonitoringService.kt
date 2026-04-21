@@ -44,6 +44,7 @@ class MonitoringService : Service() {
     private var receiversRegistered = false
     private var permissionMonitor: PermissionMonitor? = null
     private var canaryManager: CanaryManager? = null
+    private var isScreenOn = true
 
     private val authReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -55,12 +56,14 @@ class MonitoringService : Service() {
                     )
                 }
                 Intent.ACTION_SCREEN_ON -> {
+                    isScreenOn = true
                     persistSecurityEvent(
                         eventType = "SECURITY_AUTH_EVENT",
                         payload = mapOf("event" to "SCREEN_ON")
                     )
                 }
                 Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
                     persistSecurityEvent(
                         eventType = "SECURITY_AUTH_EVENT",
                         payload = mapOf("event" to "SCREEN_OFF")
@@ -163,15 +166,25 @@ class MonitoringService : Service() {
             probeLogcatAccess()
         }
 
-        // Collect and sync logs periodically
+        // Collect and sync logs periodically with adaptive polling
         scope.launch {
             while (isActive) {
+                // Adaptive polling interval based on screen state
+                val interval = if (isScreenOn) {
+                    Config.SAMPLING_INTERVAL_MS // e.g., 15000 ms when active
+                } else {
+                    Config.SAMPLING_INTERVAL_MS * 4 // e.g., 60000 ms when screen off/idle
+                }
+
                 val usageStats = collectUsageStats()
                 collectNetworkStats(usageStats)
                 collectSystemSnapshot()
+                
+                // Permission monitor runs at this adaptive frequency
                 permissionMonitor?.checkPermissionUsage()
                 syncEvents()
-                delay(Config.SAMPLING_INTERVAL_MS)
+                
+                delay(interval)
             }
         }
     }
