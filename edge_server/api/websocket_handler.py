@@ -253,6 +253,20 @@ class ConnectionManager:
                 if not self._should_emit_indicator_alert(device_id, rule_alert):
                     rule_alert = None
 
+            # [C6 Implementation] Adaptive permission correlation
+            # Correlate runtime camera/mic/location access with the current anomaly score to escalate threat severity
+            has_sensitive_permission = any(
+                str(ev.get("event_type", "")).upper() == "PERMISSION_ACCESS"
+                and json.loads(ev.get("data", "{}") if isinstance(ev.get("data"), str) else json.dumps(ev.get("data", {}))).get("permission", "").upper() in ("CAMERA", "RECORD_AUDIO", "FINE_LOCATION")
+                for ev in events
+            )
+
+            if detection.is_anomaly and has_sensitive_permission:
+                # Explicit severity escalation due to correlated permission access
+                detection.severity = min(10, detection.severity + 2)
+                detection.threat_type = ThreatType.INSIDER_THREAT 
+                detection.message += " | Escalate: Correlated with sensitive permission access."
+
             is_suspicious_window = detection.is_anomaly or rule_alert is not None
 
             # Update CUSUM
@@ -470,11 +484,17 @@ class ConnectionManager:
             data = self._parse_event_data(ev)
             domain = str(data.get("domain", "")).strip().lower()
             url = data.get("url")
+            tflite_score = data.get("tfliteScore")
 
             if not domain:
                 continue
 
-            result = self.phishing_analyzer.analyze(domain, url)
+            try:
+                tflite_score_float = float(tflite_score) if tflite_score is not None else None
+            except (ValueError, TypeError):
+                tflite_score_float = None
+
+            result = self.phishing_analyzer.analyze(domain, url, tflite_score=tflite_score_float)
 
             if result.classification == "safe":
                 continue

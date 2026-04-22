@@ -25,6 +25,7 @@ class AccessibilityMonitor : AccessibilityService() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val gson = Gson()
+    private val tfliteClassifier by lazy { TFLitePhishingClassifier(this) }
 
     // Keystroke timing
     private var lastKeystrokeTime = 0L
@@ -143,9 +144,12 @@ class AccessibilityMonitor : AccessibilityService() {
         recentDomainSeenAt[domain] = now
 
         scope.launch {
+            val tfliteScore = tfliteClassifier.classifyDomain(domain)
+            
             val payload = mutableMapOf<String, Any>(
                 "domain" to domain,
                 "source" to "accessibility",
+                "tfliteScore" to tfliteScore
             )
             fullUrl?.let { payload["url"] = it }
 
