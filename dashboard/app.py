@@ -428,6 +428,11 @@ class AdbLogStreamer:
             return
 
         lower_line = line.lower()
+        
+        # Suppress severe system noise that drowns out application logs
+        if "avc: denied" in lower_line or "auditd" in lower_line or "bpf" in lower_line or "thermal" in lower_line:
+            return
+
         if lower_line.startswith("--------- beginning of"):
             parts = line.split()
             if parts:

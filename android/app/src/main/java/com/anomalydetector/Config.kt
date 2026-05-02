@@ -2,11 +2,22 @@ package com.anomalydetector
 
 /**
  * Global configuration constants.
- * Update SERVER_URL with your NGROK WebSocket URL.
+ * The app tries LOCAL_SERVER_URL first (same WiFi network),
+ * then falls back to NGROK_SERVER_URL (remote tunnel).
  */
 object Config {
-    // Edge server WebSocket URL (update with your ngrok domain)
-    var SERVER_URL = "wss://grid-scuff-diploma.ngrok-free.dev/ws"
+    // ── Server URLs (ordered by priority) ──
+    // Local edge server on same WiFi network
+    var LOCAL_SERVER_URL = "ws://10.124.130.168:8000/ws"
+
+    // Remote ngrok tunnel (fallback when not on same network)
+    var NGROK_SERVER_URL = "wss://grid-scuff-diploma.ngrok-free.dev/ws"
+
+    // Active URL (set dynamically by WebSocketClient during connection)
+    var SERVER_URL = LOCAL_SERVER_URL
+
+    // Flaw #16: Shared secret for HMAC authentication
+    var DEVICE_SHARED_SECRET = "default_shared_secret_for_dev_only"
 
     // Sampling & timing
     const val EVENT_BATCH_SIZE = 50
@@ -14,8 +25,13 @@ object Config {
     var RECONNECT_DELAY_MS = 5_000L          // 5 seconds
     var AUTO_APPROVAL_TIMEOUT_MS = 300_000L  // 5 minutes
 
+    // Thermal throttling thresholds
+    const val THERMAL_WARN_TEMP = 40.0f      // Start reducing sampling frequency
+    const val THERMAL_CRITICAL_TEMP = 45.0f  // Aggressively throttle
+    const val THERMAL_SAMPLING_MULTIPLIER = 1.5f // 1.5x slower when warm
+    const val THERMAL_CRITICAL_MULTIPLIER = 3.0f // 3x slower when hot
+
     // VPN flow capture
-    // Keep false unless you implement full packet forwarding to avoid traffic disruption.
     const val ENABLE_VPN_TUN_CAPTURE = true
     const val ENABLE_VPN_FORWARDER = true
     const val ENABLE_VPN_CAPTURE_WITHOUT_FORWARDING = false

@@ -45,6 +45,8 @@ class MonitoringService : Service() {
     private var permissionMonitor: PermissionMonitor? = null
     private var canaryManager: CanaryManager? = null
     private var isScreenOn = true
+    private var thermalMultiplier = 1.0f
+
 
     private val authReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -94,6 +96,23 @@ class MonitoringService : Service() {
             }
         }
     }
+
+    private val thermalReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+                val temp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0f
+                thermalMultiplier = when {
+                    temp >= Config.THERMAL_CRITICAL_TEMP -> Config.THERMAL_CRITICAL_MULTIPLIER.toFloat()
+                    temp >= Config.THERMAL_WARN_TEMP -> Config.THERMAL_SAMPLING_MULTIPLIER.toFloat()
+                    else -> 1.0f
+                }
+                if (thermalMultiplier > 1.0f) {
+                    Log.w("MonitoringService", "Thermal Throttling Active: temp=$temp, multiplier=$thermalMultiplier")
+                }
+            }
+        }
+    }
+
 
     override fun onCreate() {
         super.onCreate()
@@ -169,12 +188,13 @@ class MonitoringService : Service() {
         // Collect and sync logs periodically with adaptive polling
         scope.launch {
             while (isActive) {
-                // Adaptive polling interval based on screen state
-                val interval = if (isScreenOn) {
-                    Config.SAMPLING_INTERVAL_MS // e.g., 15000 ms when active
+                // Adaptive polling interval based on screen state and thermal state
+                val baseInterval = if (isScreenOn) {
+                    Config.SAMPLING_INTERVAL_MS
                 } else {
-                    Config.SAMPLING_INTERVAL_MS * 4 // e.g., 60000 ms when screen off/idle
+                    Config.SAMPLING_INTERVAL_MS * 4
                 }
+                val interval = (baseInterval * thermalMultiplier).toLong()
 
                 val usageStats = collectUsageStats()
                 collectNetworkStats(usageStats)
@@ -324,7 +344,8 @@ class MonitoringService : Service() {
                             "availableMem" to memInfo.availMem,
                             "totalMem" to memInfo.totalMem,
                             "lowMemory" to memInfo.lowMemory,
-                            "batteryPct" to batteryPct
+                            "batteryPct" to batteryPct,
+                            "tz_offset" to java.util.TimeZone.getDefault().rawOffset
                         )
                     )
                 )
@@ -391,29 +412,28 @@ class MonitoringService : Service() {
         }
         registerReceiver(authReceiver, authFilter)
 
-        val packageFilter = IntentFilter().apply {
+        val pkgFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
             addAction(Intent.ACTION_PACKAGE_REPLACED)
             addDataScheme("package")
         }
-        registerReceiver(packageReceiver, packageFilter)
+        registerReceiver(packageReceiver, pkgFilter)
+
+        registerReceiver(thermalReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
         receiversRegistered = true
     }
 
     private fun unregisterSecurityReceivers() {
-        if (!receiversRegistered) return
-        try {
+        if (receiversRegistered) {
             unregisterReceiver(authReceiver)
-        } catch (_: IllegalArgumentException) {
-        }
-        try {
             unregisterReceiver(packageReceiver)
-        } catch (_: IllegalArgumentException) {
+            unregisterReceiver(thermalReceiver)
+            receiversRegistered = false
         }
-        receiversRegistered = false
     }
+
 
     private fun persistSecurityEvent(
         eventType: String,
@@ -480,6 +500,9 @@ class MonitoringService : Service() {
                     )
                     database.alertDao().insert(alert)
                     showAlertNotification(alert)
+                } else if (msg["type"] == "action_result") {
+                    val message = msg["message"] as? String ?: "Action completed"
+                    showActionNotification(message)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse server message: ${e.message}")
@@ -503,6 +526,19 @@ class MonitoringService : Service() {
 
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(Config.NOTIFICATION_ALERT_BASE + alert.severity, notification)
+    }
+
+    private fun showActionNotification(message: String) {
+        val notification = NotificationCompat.Builder(this, Config.CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_menu_save)
+            .setContentTitle("🛡️ Threat Neutralized")
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(Config.NOTIFICATION_ALERT_BASE + 99, notification)
     }
 
     private fun buildNotification(): Notification {

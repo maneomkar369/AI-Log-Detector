@@ -249,6 +249,7 @@ class MainActivity : AppCompatActivity() {
         alertAdapter = AlertAdapter(
             onApprove = { viewModel.approveAlert(it.anomalyId) },
             onDeny = { viewModel.denyAlert(it.anomalyId) },
+            onMarkNormal = { viewModel.markNormal(it.anomalyId) },
         )
         binding.recyclerAlerts.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
@@ -343,6 +344,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnSaveConfig.setOnClickListener {
             saveConfigPageState()
+        }
+
+        binding.btnClearAll.setOnClickListener {
+            viewModel.clearAllAlerts()
+            Toast.makeText(this, "All local alerts cleared", Toast.LENGTH_SHORT).show()
         }
     }
 

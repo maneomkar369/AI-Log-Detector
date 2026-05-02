@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     android-tools-adb \
     android-tools-fastboot \
     ca-certificates \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

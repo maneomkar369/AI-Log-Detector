@@ -35,8 +35,6 @@ def test_normal_behavior(detector, baseline):
         feature_vector=normal_vector,
         baseline_mean=baseline["mean"],
         baseline_cov=baseline["cov"],
-        distance_mean=baseline["distance_mean"],
-        distance_std=baseline["distance_std"],
     )
     assert not result.is_anomaly
     assert result.threat_type == ThreatType.NONE
@@ -50,8 +48,6 @@ def test_extreme_anomaly(detector, baseline):
         feature_vector=extreme_vector,
         baseline_mean=baseline["mean"],
         baseline_cov=baseline["cov"],
-        distance_mean=baseline["distance_mean"],
-        distance_std=baseline["distance_std"],
     )
     assert result.is_anomaly
     assert result.severity >= 5
@@ -67,8 +63,6 @@ def test_sequential_deviation_classified_as_malware(detector, baseline):
         feature_vector=vector,
         baseline_mean=baseline["mean"],
         baseline_cov=baseline["cov"],
-        distance_mean=baseline["distance_mean"],
-        distance_std=baseline["distance_std"],
     )
     if result.is_anomaly:
         assert result.threat_type in (ThreatType.MALWARE_MIMICRY, ThreatType.DEVICE_MISUSE)
@@ -82,8 +76,6 @@ def test_interaction_deviation_classified_as_insider(detector, baseline):
         feature_vector=vector,
         baseline_mean=baseline["mean"],
         baseline_cov=baseline["cov"],
-        distance_mean=baseline["distance_mean"],
-        distance_std=baseline["distance_std"],
     )
     if result.is_anomaly:
         assert result.threat_type in (ThreatType.INSIDER_THREAT, ThreatType.DEVICE_MISUSE)

@@ -8,11 +8,13 @@ The Behavioral Log Anomaly Detector is an end‑to‑end security system that co
 
 Unlike traditional antivirus solutions that rely on signature databases, this system builds a dynamic behavioral baseline for each user and identifies deviations in real time. When an anomaly is detected, the user receives an alert and can approve autonomous threat neutralization (process termination, network blocking, app quarantine).
 
-## Quick Setup Docs
+## Quick Setup & Documentation
 
 - Full stack (local + Android): [SETUP_GUIDE.md](SETUP_GUIDE.md)
-- Simple setup + daily startup: [SIMPLE_SETUP_STARTUP.md](SIMPLE_SETUP_STARTUP.md)
+- Simple setup + daily startup: [SETUP_STARTUP.txt](SETUP_STARTUP.txt)
 - Raspberry Pi edge server only: [EDGE_SERVER_RASPBERRY_PI_SETUP.md](EDGE_SERVER_RASPBERRY_PI_SETUP.md)
+- Architecture & System Diagrams: [ARCHITECTURE_AND_DIAGRAMS.md](ARCHITECTURE_AND_DIAGRAMS.md)
+- Patent Claims & Methodologies: [PATENT_CLAIMS.md](PATENT_CLAIMS.md)
 
 ## ✨ Key Features
 

@@ -33,8 +33,14 @@ class Alert(Base):
     mahalanobis_distance: Mapped[Optional[float]] = mapped_column(
         Float, nullable=True
     )
+    # Platt-scaled calibrated probability (Flaw #10)
+    anomaly_probability: Mapped[float] = mapped_column(Float, default=0.0)
+
     # Structured XAI payload encoded as JSON string.
     xai_explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Flaw #26: Store feature vector for feedback loop
+    feature_vector: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Recommended actions (JSON list)
     actions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

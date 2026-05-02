@@ -21,6 +21,7 @@ import java.util.*
 class AlertAdapter(
     private val onApprove: (Alert) -> Unit,
     private val onDeny: (Alert) -> Unit,
+    private val onMarkNormal: (Alert) -> Unit,
 ) : ListAdapter<Alert, AlertAdapter.ViewHolder>(DIFF) {
 
     private data class SeverityUi(
@@ -39,6 +40,7 @@ class AlertAdapter(
         val textStatus: TextView = view.findViewById(R.id.textStatus)
         val btnApprove: Button = view.findViewById(R.id.btnApprove)
         val btnDeny: Button = view.findViewById(R.id.btnDeny)
+        val btnMarkNormal: Button = view.findViewById(R.id.btnMarkNormal)
         val severityBar: View = view.findViewById(R.id.severityBar)
     }
 
@@ -94,6 +96,10 @@ class AlertAdapter(
                 R.drawable.bg_alert_status_denied,
                 android.graphics.Color.parseColor("#C3273C"),
             )
+            "normal" -> Pair(
+                R.drawable.bg_alert_status_approved, // Reuse approved bg
+                android.graphics.Color.parseColor("#1B8B50"),
+            )
             else -> Pair(
                 R.drawable.bg_alert_status_pending,
                 android.graphics.Color.parseColor("#A15E10"),
@@ -106,9 +112,11 @@ class AlertAdapter(
         val isPending = status == "pending"
         holder.btnApprove.visibility = if (isPending) View.VISIBLE else View.GONE
         holder.btnDeny.visibility = if (isPending) View.VISIBLE else View.GONE
+        holder.btnMarkNormal.visibility = if (isPending) View.VISIBLE else View.GONE
 
         holder.btnApprove.setOnClickListener { onApprove(alert) }
         holder.btnDeny.setOnClickListener { onDeny(alert) }
+        holder.btnMarkNormal.setOnClickListener { onMarkNormal(alert) }
     }
 
     companion object {

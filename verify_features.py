@@ -58,12 +58,13 @@ if not pending_deny and phone_alerts_exist:
     pending_deny = alerts[0]
 
 if pending_deny:
-    deny_res = post_json(EDGE_URL, f"/api/alerts/{pending_deny['id']}/deny")
+    p_id = pending_deny.get('anomalyId') or pending_deny.get('anomaly_id') or pending_deny.get('id')
+    deny_res = post_json(EDGE_URL, f"/api/alerts/{p_id}/deny")
     updated_alert = get_json(EDGE_URL, f"/api/alerts/f9ed08dc27055482")
     # Finding the updated one in the list
-    upd = next((a for a in updated_alert if a["id"] == pending_deny["id"]), None) if isinstance(updated_alert, list) else None
+    upd = next((a for a in updated_alert if (a.get('anomalyId') or a.get('anomaly_id') or a.get('id')) == p_id), None) if isinstance(updated_alert, list) else None
     deny_ok = upd and upd.get("status") == "denied"
-    results["3_deny_workflow"] = {"pass": bool(deny_ok), "detail": f"ID {pending_deny['id']} status: {upd.get('status') if upd else 'N/A'}"}
+    results["3_deny_workflow"] = {"pass": bool(deny_ok), "detail": f"ID {p_id} status: {upd.get('status') if upd else 'N/A'}"}
 else:
     results["3_deny_workflow"] = {"pass": False, "detail": "No alert found for f9ed08dc27055482"}
 
@@ -78,7 +79,7 @@ time.sleep(3)
 synth_alerts = get_json(EDGE_URL, "/api/alerts/smoke_action_e2e")
 latest_id = None
 if synth_alerts and len(synth_alerts) > 0:
-    latest_id = synth_alerts[0]["id"]
+    latest_id = synth_alerts[0].get('anomalyId') or synth_alerts[0].get('anomaly_id') or synth_alerts[0].get('id')
     approve_res = post_json(DASHBOARD_URL, f"/api/alerts/{latest_id}/approve")
     # Some apps use EDGE_URL for POST, others use DASHBOARD_URL. Let's try EDGE_URL if DASH fails.
     if not approve_res or "status" not in approve_res:
@@ -92,10 +93,10 @@ else:
 # 5) Dashboard propagation
 dash_alerts = get_json(DASHBOARD_URL, "/api/dashboard/alerts")
 id_to_check = None
-if results["3_deny_workflow"]["pass"]: id_to_check = pending_deny["id"]
+if results["3_deny_workflow"]["pass"]: id_to_check = pending_deny.get('anomalyId') or pending_deny.get('anomaly_id') or pending_deny.get('id')
 elif results["4_approve_workflow"]["pass"]: id_to_check = latest_id
 
-dash_ok = any(str(a["id"]) == str(id_to_check) for a in dash_alerts) if dash_alerts and id_to_check else False
+dash_ok = any(str(a.get('anomalyId') or a.get('anomaly_id') or a.get('id')) == str(id_to_check) for a in dash_alerts) if dash_alerts and id_to_check else False
 if not dash_ok and id_to_check:
     # Try a simple check if the ID exists in the full list
     dash_ok = id_to_check in str(dash_alerts)

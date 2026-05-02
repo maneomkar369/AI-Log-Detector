@@ -21,4 +21,7 @@ interface AlertDao {
 
     @Query("DELETE FROM alerts WHERE receivedAt < :before")
     suspend fun deleteOld(before: Long)
+
+    @Query("DELETE FROM alerts")
+    suspend fun deleteAll()
 }

@@ -94,6 +94,10 @@ class ActionExecutor:
                 cmd = f"{self.adb} -s {effective_device_id} shell input keyevent 26"
                 result["success"], result["output"] = await self._run(cmd)
 
+            elif action == "uninstall_app" and target_package:
+                cmd = f"{self.adb} -s {effective_device_id} uninstall {target_package}"
+                result["success"], result["output"] = await self._run(cmd)
+
             elif action == "notify":
                 # Notification-only action, no ADB command needed
                 result["output"] = "Notification sent via WebSocket"

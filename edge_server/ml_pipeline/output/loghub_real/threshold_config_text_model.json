@@ -1,0 +1,11 @@
+{
+  "loghub_attack_threshold": 0.06,
+  "selection": {
+    "threshold": 0.06,
+    "precision": 0.6943015541216032,
+    "recall": 0.9995289807667146,
+    "f1_score": 0.8194143516035611,
+    "f2_score": 0.9187492483463618,
+    "selection_reason": "max recall with precision >= 0.65"
+  }
+}

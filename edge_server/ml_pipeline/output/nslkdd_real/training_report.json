@@ -1,0 +1,80 @@
+{
+  "dataset": {
+    "kaggle_ref": "hassan06/nslkdd",
+    "dataset_path": "/Users/vishal/.cache/kagglehub/datasets/hassan06/nslkdd/versions/1",
+    "train_file": "/Users/vishal/.cache/kagglehub/datasets/hassan06/nslkdd/versions/1/KDDTrain+.txt",
+    "test_file": "/Users/vishal/.cache/kagglehub/datasets/hassan06/nslkdd/versions/1/KDDTest+.txt",
+    "train_rows": 125973,
+    "test_rows": 22544,
+    "task": "binary anomaly classification (normal vs attack)"
+  },
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 450,
+    "class_weight": "balanced_subsample",
+    "min_samples_leaf": 2,
+    "categorical_features": [
+      "protocol_type",
+      "service",
+      "flag"
+    ],
+    "numeric_feature_count": 38
+  },
+  "threshold_tuning": {
+    "validation_rows": 25195,
+    "selected_threshold": 0.06,
+    "selection_details": {
+      "threshold": 0.06,
+      "precision": 0.968848124276979,
+      "recall": 0.9999147194269146,
+      "f1_score": 0.9841363102232668,
+      "f2_score": 0.9935430295224216,
+      "selection_reason": "max recall with precision >= 0.80"
+    },
+    "baseline_threshold": 0.5
+  },
+  "metrics": {
+    "default_threshold_0_5": {
+      "accuracy": 0.7626419446415897,
+      "precision": 0.9679759819864898,
+      "recall": 0.6029767006935245,
+      "f1_score": 0.743073894463917,
+      "confusion_matrix": [
+        [
+          9455,
+          256
+        ],
+        [
+          5095,
+          7738
+        ]
+      ],
+      "roc_auc": 0.9659032544069146
+    },
+    "tuned_threshold": {
+      "accuracy": 0.9029897090134847,
+      "precision": 0.9168363351605325,
+      "recall": 0.9123353853346841,
+      "f1_score": 0.9145803226184431,
+      "confusion_matrix": [
+        [
+          8649,
+          1062
+        ],
+        [
+          1125,
+          11708
+        ]
+      ],
+      "roc_auc": 0.9659032544069146
+    },
+    "recall_delta": 0.30935868464115956,
+    "precision_delta": -0.051139646825957286
+  },
+  "artifacts": {
+    "pipeline": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/nslkdd_real/rf_pipeline.pkl",
+    "report": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/nslkdd_real/training_report.json",
+    "feature_importance": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/nslkdd_real/top_feature_importance.csv",
+    "threshold_config": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/nslkdd_real/threshold_config.json"
+  }
+}

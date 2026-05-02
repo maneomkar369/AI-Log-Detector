@@ -10,6 +10,7 @@ import uuid
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import numpy as np
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +31,7 @@ class AlertManager:
         "high": ["notify", "kill_process", "block_network"],
         # severity 9–10 → notify + auto-escalate if no response
         "critical": ["notify", "kill_process", "block_network",
-                     "quarantine_app", "lock_device"],
+                     "quarantine_app", "uninstall_app", "lock_device"],
     }
 
     def create_alert(
@@ -41,9 +42,11 @@ class AlertManager:
         message: str,
         confidence: float,
         mahalanobis_distance: float = 0.0,
+        anomaly_probability: float = 0.0,
         target_package: Optional[str] = None,
         target_uid: Optional[int] = None,
         xai_explanation: Optional[Dict[str, Any]] = None,
+        feature_vector: Optional[np.ndarray] = None,
     ) -> Alert:
         """
         Create a new Alert object (not yet persisted).
@@ -56,6 +59,8 @@ class AlertManager:
         message : str
         confidence : float (0-1)
         mahalanobis_distance : float
+        anomaly_probability : float (0-1)
+            Platt-scaled calibrated probability (Flaw #10).
 
         Returns
         -------
@@ -86,14 +91,16 @@ class AlertManager:
             confidence=confidence,
             mahalanobis_distance=mahalanobis_distance,
             xai_explanation=json.dumps(xai_explanation) if xai_explanation else None,
+            feature_vector=json.dumps(feature_vector.tolist()) if feature_vector is not None else None,
             actions=json.dumps(actions),
             status="pending",
+            anomaly_probability=anomaly_probability,
             created_at=datetime.utcnow(),
         )
 
         logger.info(
-            "Alert created: %s | device=%s severity=%d type=%s",
-            alert.anomaly_id, device_id, severity, threat_type,
+            "Alert created: %s | device=%s severity=%d type=%s prob=%.3f",
+            alert.anomaly_id, device_id, severity, threat_type, anomaly_probability,
         )
         return alert
 
@@ -106,6 +113,7 @@ class AlertManager:
     def alert_to_ws_message(self, alert: Alert) -> str:
         """Serialize an alert for WebSocket delivery to the device."""
         explanation = self._parse_json_object(alert.xai_explanation)
+        anomaly_prob = alert.anomaly_probability
         return json.dumps({
             "type": "alert",
             "anomalyId": alert.anomaly_id,
@@ -117,6 +125,8 @@ class AlertManager:
             "threat_type": alert.threat_type,
             "message": alert.message,
             "confidence": alert.confidence,
+            "anomalyProbability": round(anomaly_prob, 4),
+            "anomaly_probability": round(anomaly_prob, 4),
             "actions": json.loads(alert.actions) if alert.actions else [],
             "xaiExplanation": explanation,
             "xai_explanation": explanation,
@@ -136,11 +146,11 @@ class AlertManager:
             return {}
         return parsed if isinstance(parsed, dict) else {}
 
-    @staticmethod
     def _build_action_plan(
+        self,
         action_names: List[str],
-        target_package: Optional[str],
-        target_uid: Optional[int],
+        target_package: Optional[str] = None,
+        target_uid: Optional[int] = None,
     ) -> List[dict[str, Any]]:
         """Build an action plan with per-action target metadata when available."""
         plan: List[dict[str, Any]] = []
@@ -148,7 +158,7 @@ class AlertManager:
         for action_name in action_names:
             item: dict[str, Any] = {"name": action_name}
 
-            if action_name in {"kill_process", "quarantine_app"}:
+            if action_name in {"kill_process", "quarantine_app", "uninstall_app"}:
                 if not target_package:
                     continue
                 item["targetPackage"] = target_package
@@ -192,6 +202,21 @@ class AlertManager:
             logger.info("Alert %s denied", alert_id)
         return alert
 
+    async def mark_normal_alert(
+        self, db: AsyncSession, alert_id: str
+    ) -> Optional[Alert]:
+        """Mark an alert as 'Normal' (User Correction Loop - Flaw #26)."""
+        from sqlalchemy import select
+        result = await db.execute(
+            select(Alert).where(Alert.anomaly_id == alert_id)
+        )
+        alert = result.scalar_one_or_none()
+        if alert:
+            alert.status = "normal"
+            alert.responded_at = datetime.utcnow()
+            logger.info("Alert %s marked as normal (user correction)", alert_id)
+        return alert
+
     async def get_device_alerts(
         self, db: AsyncSession, device_id: str, limit: int = 50
     ) -> List[Alert]:
@@ -204,3 +229,11 @@ class AlertManager:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def delete_all_alerts(self, db: AsyncSession, device_id: str) -> int:
+        """Delete all alerts for a device."""
+        from sqlalchemy import delete
+        result = await db.execute(
+            delete(Alert).where(Alert.device_id == device_id)
+        )
+        return result.rowcount

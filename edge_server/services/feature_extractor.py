@@ -6,13 +6,17 @@ over a time window:
 
   Temporal   (24 dims) — Hour-of-day app usage distribution
   Sequential (28 dims) — Markov transition probabilities between top apps
-    Interaction(20 dims) — Interaction + network + security/system summary signals
+  Interaction(20 dims) — Interaction + network + security/system summary signals
+
+Enhancement (Flaw #3):
+  Returns a (vector, mask) tuple where mask is a 72-dim binary array
+  indicating which features have valid data (1) vs missing (0).
 """
 
 import json
 import math
 from collections import Counter, defaultdict
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -26,13 +30,14 @@ class FeatureExtractor:
     Usage::
 
         extractor = FeatureExtractor()
-        vector = extractor.extract(events)
+        vector, mask = extractor.extract(events)
         # vector.shape == (72,)
+        # mask.shape == (72,)  — binary: 1=present, 0=missing
     """
 
     TOP_K_APPS = 10  # Track transitions between top-10 most-used apps
 
-    def extract(self, events: List[dict]) -> np.ndarray:
+    def extract(self, events: List[dict]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Extract a 72-dimensional feature vector from a list of events.
 
@@ -43,45 +48,89 @@ class FeatureExtractor:
 
         Returns
         -------
-        np.ndarray
-            Shape (72,) feature vector
+        vector : np.ndarray, shape (72,)
+            Feature vector.
+        mask : np.ndarray, shape (72,)
+            Binary mask: 1.0 = feature has valid data, 0.0 = missing/absent.
+            (Flaw #3: enables masked Mahalanobis distance for sparse telemetry)
         """
-        temporal = self._extract_temporal(events)         # 24 dims
-        sequential = self._extract_sequential(events)     # 28 dims
-        interaction = self._extract_interaction(events)   # 20 dims
+        temporal, temporal_mask = self._extract_temporal(events)       # 24 dims
+        sequential, sequential_mask = self._extract_sequential(events) # 28 dims
+        interaction, interaction_mask = self._extract_interaction(events)  # 20 dims
 
         vector = np.concatenate([temporal, sequential, interaction])
+        mask = np.concatenate([temporal_mask, sequential_mask, interaction_mask])
+
         assert vector.shape == (settings.feature_dim,), (
             f"Expected {settings.feature_dim} dims, got {vector.shape[0]}"
         )
-        return vector
+        return vector, mask
 
     # ────────────────────── Temporal Features (24) ──────────────────────
 
-    def _extract_temporal(self, events: List[dict]) -> np.ndarray:
+    def _extract_temporal(self, events: List[dict]) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Hour-of-day app usage distribution.
+        Hour-of-day app usage distribution with improved timezone handling.
+        
         For each of the 24 hours, count how many events occurred.
+        When timezone information is available, uses local time for consistency.
+        When timezone changes occur, maintains relative patterns rather than absolute hours.
         Returns a probability distribution (sums to 1).
+        
+        Mask: all 1s if any timestamped events exist, all 0s otherwise.
         """
         hour_counts = np.zeros(24, dtype=np.float64)
-
+        has_timestamps = False
+        
+        # Extract timezone offset from system state events if available
+        tz_offset_ms = None
+        for ev in events:
+            if ev.get("event_type") == "SYSTEM_STATE":
+                data = ev.get("data", {})
+                if isinstance(data, str):
+                    try:
+                        data = json.loads(data)
+                    except:
+                        data = {}
+                if isinstance(data, dict) and "tz_offset" in data:
+                    tz_offset_ms = data["tz_offset"]
+                    break
+        
         for ev in events:
             ts = ev.get("timestamp", 0)
             if ts > 0:
+                has_timestamps = True
                 # Timestamp is epoch millis
-                from datetime import datetime, timezone
-                dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
-                hour_counts[dt.hour] += 1
-
+                from datetime import datetime, timezone, timedelta
+                
+                # Convert to datetime in UTC
+                dt_utc = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+                
+                # Apply timezone adjustment if available
+                if tz_offset_ms is not None:
+                    # Convert timezone offset from milliseconds to hours
+                    tz_offset_hours = tz_offset_ms / 3600000
+                    # Create timezone object
+                    local_tz = timezone(timedelta(hours=tz_offset_hours))
+                    # Convert to local time
+                    dt_local = dt_utc.astimezone(local_tz)
+                    # Use local hour for consistency
+                    hour_counts[dt_local.hour] += 1
+                else:
+                    # Fallback to UTC hour
+                    hour_counts[dt_utc.hour] += 1
+        
+        # Normalize to probability distribution
         total = hour_counts.sum()
         if total > 0:
             hour_counts /= total
-        return hour_counts
+        
+        mask = np.ones(24, dtype=np.float64) if has_timestamps else np.zeros(24, dtype=np.float64)
+        return hour_counts, mask
 
     # ────────────────────── Sequential Features (28) ──────────────────
 
-    def _extract_sequential(self, events: List[dict]) -> np.ndarray:
+    def _extract_sequential(self, events: List[dict]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Markov transition probabilities between top-K apps.
 
@@ -89,12 +138,16 @@ class FeatureExtractor:
         - Top-K app frequency distribution (10 dims)
         - Top-K app transition entropy per source app (10 dims)
         - Overall transition probabilities for top 4 transitions (8 dims = 4×2)
+
+        Mask: all 1s if any APP_USAGE events exist, all 0s otherwise.
         """
         app_events = [
             ev for ev in events
             if ev.get("event_type") in ("APP_USAGE", "app_usage")
             and ev.get("package_name")
         ]
+
+        has_app_events = len(app_events) > 0
 
         # Count app frequencies
         app_counts = Counter(ev["package_name"] for ev in app_events)
@@ -135,11 +188,13 @@ class FeatureExtractor:
             top_trans[i * 2] = top_apps.index(src) / self.TOP_K_APPS if src in top_apps else 0
             top_trans[i * 2 + 1] = c / total_trans
 
-        return np.concatenate([freq_dist, src_entropy, top_trans])
+        vector = np.concatenate([freq_dist, src_entropy, top_trans])
+        mask = np.ones(28, dtype=np.float64) if has_app_events else np.zeros(28, dtype=np.float64)
+        return vector, mask
 
     # ────────────────────── Interaction Features (20) ──────────────────
 
-    def _extract_interaction(self, events: List[dict]) -> np.ndarray:
+    def _extract_interaction(self, events: List[dict]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Interaction, network, and security/system features.
 
@@ -151,6 +206,8 @@ class FeatureExtractor:
                                          network signal,
                                          security ratio,
                                          burst/system signal
+
+        Mask (Flaw #3): Per-group masking based on data availability.
         """
         keystroke_times = []
         touch_durations = []
@@ -256,7 +313,21 @@ class FeatureExtractor:
             max(self._burstiness(events), system_signal),
         ], dtype=np.float64)
 
-        return np.concatenate([k_stats, t_stats, s_stats, combined])
+        vector = np.concatenate([k_stats, t_stats, s_stats, combined])
+
+        # Flaw #3: Per-group masking
+        mask = np.ones(20, dtype=np.float64)
+        if not keystroke_times:
+            mask[0:5] = 0.0   # Keystroke group missing
+        if not touch_durations:
+            mask[5:10] = 0.0  # Touch group missing
+        if not swipe_velocities:
+            mask[10:15] = 0.0  # Swipe group missing
+        # Combined stats always present if any events exist
+        if len(events) == 0:
+            mask[15:20] = 0.0
+
+        return vector, mask
 
     @staticmethod
     def _parse_data(data):
@@ -293,3 +364,28 @@ class FeatureExtractor:
             return 0.0
         std_d = math.sqrt(sum((d - mean_d) ** 2 for d in deltas) / len(deltas))
         return std_d / mean_d
+
+    def _extract_timezone_features(self, events: List[dict]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Extract timezone-related features to handle time zone changes.
+        
+        Returns timezone offset as a normalized feature and a mask indicating
+        whether timezone information is available.
+        """
+        tz_offset_ms = None
+        for ev in events:
+            if ev.get("event_type") == "SYSTEM_STATE" and "tz_offset" in ev.get("data", {}):
+                tz_offset_ms = ev["data"]["tz_offset"]
+                break
+        
+        # Normalize timezone offset to [-1, 1] range (UTC-12 to UTC+12)
+        if tz_offset_ms is not None:
+            tz_offset_normalized = tz_offset_ms / (12 * 3600000)  # Convert to hours and normalize
+            tz_offset_normalized = np.clip(tz_offset_normalized, -1.0, 1.0)
+            feature = np.array([tz_offset_normalized])
+            mask = np.array([1.0])
+        else:
+            feature = np.array([0.0])
+            mask = np.array([0.0])
+            
+        return feature, mask

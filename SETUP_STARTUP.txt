@@ -8,6 +8,10 @@ Services included:
 - postgres
 - redis
 
+Reference Documentation:
+- PATENT_CLAIMS.md (Methodology Claims)
+- ARCHITECTURE_AND_DIAGRAMS.md (System Flow)
+
 ----------------------------------------
 1) PREREQUISITES
 ----------------------------------------

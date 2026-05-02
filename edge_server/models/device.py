@@ -47,6 +47,10 @@ class Device(Base):
     )
     is_active: Mapped[bool] = mapped_column(default=True)
 
+    # Flaw #25: Time Zone Shift Tracking
+    last_tz_offset: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tz_shift_active_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     def set_baseline_mean(self, arr) -> None:
         """Serialize a numpy array / list to JSON for storage."""
         self.baseline_mean = json.dumps(arr.tolist() if hasattr(arr, "tolist") else arr)

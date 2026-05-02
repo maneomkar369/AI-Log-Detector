@@ -1,0 +1,38 @@
+{
+  "dataset": {
+    "kaggle_ref": "omduggineni/loghub-android-log-data",
+    "dataset_path": "/Users/vishal/.cache/kagglehub/datasets/omduggineni/loghub-android-log-data/versions/1",
+    "log_file": "/Users/vishal/.cache/kagglehub/datasets/omduggineni/loghub-android-log-data/versions/1/Android.log",
+    "parsed_lines": 1554941,
+    "train_rows": 1243952,
+    "test_rows": 310989
+  },
+  "model": {
+    "type": "IsolationForest",
+    "n_estimators": 250,
+    "contamination": 0.1,
+    "vectorizer": "TfidfVectorizer(ngram_range=(1,2), max_features=8000)"
+  },
+  "weak_label_metrics": {
+    "accuracy": 0.7462128885587593,
+    "precision": 0.003531432934588954,
+    "recall": 0.0023263124803520907,
+    "f1_score": 0.0028049073243458377,
+    "confusion_matrix": [
+      [
+        231953,
+        31321
+      ],
+      [
+        47604,
+        111
+      ]
+    ]
+  },
+  "artifacts": {
+    "model": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/isolation_forest_model.pkl",
+    "vectorizer": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/tfidf_vectorizer.pkl",
+    "report": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/training_report.json",
+    "anomaly_preview": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/anomaly_preview.csv"
+  }
+}

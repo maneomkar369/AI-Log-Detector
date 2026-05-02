@@ -6,6 +6,7 @@ from .baseline_manager import BaselineManager
 from .alert_manager import AlertManager
 from .action_executor import ActionExecutor
 from .redis_buffer import RedisBuffer
+from .ml_inference_loader import EnsembleInferenceLoader
 
 __all__ = [
     "FeatureExtractor",
@@ -14,4 +15,5 @@ __all__ = [
     "AlertManager",
     "ActionExecutor",
     "RedisBuffer",
+    "EnsembleInferenceLoader",
 ]

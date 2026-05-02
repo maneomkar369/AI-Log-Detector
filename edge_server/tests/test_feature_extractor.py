@@ -67,21 +67,21 @@ def sample_events():
 
 def test_extract_returns_correct_shape(extractor, sample_events):
     """Feature vector must be exactly 72 dimensions."""
-    vector = extractor.extract(sample_events)
+    vector, _ = extractor.extract(sample_events)
     assert isinstance(vector, np.ndarray)
     assert vector.shape == (72,)
 
 
 def test_extract_temporal_sums_to_one(extractor, sample_events):
     """Temporal features (hour distribution) should sum to ~1.0."""
-    vector = extractor.extract(sample_events)
+    vector, _ = extractor.extract(sample_events)
     temporal = vector[:24]
     assert abs(temporal.sum() - 1.0) < 0.01  # Allow small float error
 
 
 def test_extract_empty_events(extractor):
     """Empty event list should return zero vector."""
-    vector = extractor.extract([])
+    vector, _ = extractor.extract([])
     assert vector.shape == (72,)
     # Should be mostly zeros
     assert np.allclose(vector, 0.0, atol=0.01)
@@ -96,14 +96,14 @@ def test_extract_no_interaction_events(extractor):
         "data": "{}",
     } for i in range(10)]
 
-    vector = extractor.extract(events)
+    vector, _ = extractor.extract(events)
     interaction = vector[52:]  # Last 20 dims
     assert np.allclose(interaction[:15], 0.0, atol=0.01)  # k, t, s stats
 
 
 def test_extract_values_are_finite(extractor, sample_events):
     """All feature values must be finite (no NaN or Inf)."""
-    vector = extractor.extract(sample_events)
+    vector, _ = extractor.extract(sample_events)
     assert np.all(np.isfinite(vector))
 
 
@@ -138,7 +138,7 @@ def test_extract_includes_network_security_system_signals(extractor):
         },
     ]
 
-    vector = extractor.extract(events)
+    vector, _ = extractor.extract(events)
     combined = vector[67:72]
 
     # combined[2] = network signal, combined[3] = security ratio,

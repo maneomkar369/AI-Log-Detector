@@ -1,20 +1,24 @@
 """
-Federated Learning Coordinator (Scaffold)
+Federated Learning Coordinator (Improved)
 =========================================
-Provides a minimal privacy-preserving FL control plane:
-- device/client registration
-- global model retrieval
-- local update submission (weight deltas only)
-- weighted aggregation into a new global model version
-
-This scaffold does not store or transmit raw behavioral events.
+- Loads initial global model from generic baseline (fixes empty weights)
+- Adds gradient norm clipping to prevent model explosion
+- Adds stale client cleanup (removes clients not seen for 7 days)
+- Provides full async API: register, get_model, submit_update, aggregate, get_status
 """
 
 import asyncio
+import logging
+import math
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
+
+import numpy as np
+from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,24 +41,71 @@ class FLUpdateRecord:
 
 
 class FederatedLearningCoordinator:
-    """In-memory federated learning coordinator for API scaffolding."""
+    """Improved FL coordinator with initial model, norm clipping, and cleanup."""
 
-    def __init__(self, min_updates_per_round: int = 2, max_delta_dim: int = 4096):
+    def __init__(self, min_updates_per_round: int = 2, max_delta_dim: int = 4096, use_initial_model: bool = True):
         self._lock = asyncio.Lock()
-
         self.min_updates_per_round = max(1, int(min_updates_per_round))
         self.max_delta_dim = max(8, int(max_delta_dim))
+        self._stop_event = asyncio.Event()
 
         self.current_round = 1
         self.global_model_version = 1
-        self.global_weights: List[float] = []
+
+        # Load initial model from generic baseline (or None if empty)
+        if use_initial_model:
+            initial_weights = self._load_initial_weights()
+            self.global_weights = np.array(initial_weights) if initial_weights else None
+        else:
+            self.global_weights = None
 
         self.clients: Dict[str, FLClientRecord] = {}
         self.updates_by_round: Dict[int, List[FLUpdateRecord]] = {}
 
-    @staticmethod
-    def _utcnow_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+
+    def _load_initial_weights(self) -> List[float]:
+        """Load initial global model from generic baseline (72‑dim)."""
+        try:
+            from services.baseline_manager import BaselineManager
+            bm = BaselineManager()
+            mean, _ = bm.get_warm_start_baseline()
+            # Use the baseline mean as initial weights
+            return mean.tolist()
+        except Exception as e:
+            logger.warning("Could not load initial model: %s, using zeros", e)
+            return [0.0] * settings.feature_dim
+
+    async def _cleanup_stale_clients(self):
+        """Remove clients not seen for 7 days."""
+        while not self._stop_event.is_set():
+            try:
+                await asyncio.wait_for(self._stop_event.wait(), timeout=3600)
+            except asyncio.TimeoutError:
+                pass
+            
+            if self._stop_event.is_set():
+                break
+
+            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+            async with self._lock:
+                stale = []
+                for cid, rec in self.clients.items():
+                    try:
+                        last_seen = datetime.fromisoformat(rec.last_seen)
+                        # Ensure timezone awareness if needed
+                        if last_seen.tzinfo is None:
+                            last_seen = last_seen.replace(tzinfo=timezone.utc)
+                        if last_seen < cutoff:
+                            stale.append(cid)
+                    except (ValueError, TypeError) as e:
+                        logger.warning("Malformed last_seen date for client %s: %s", cid, rec.last_seen)
+                        # Prune clients with malformed dates as a safety measure
+                        stale.append(cid)
+
+                for cid in stale:
+                    del self.clients[cid]
+                if stale:
+                    logger.info("Removed %d stale FL clients", len(stale))
 
     async def register_client(
         self,
@@ -78,14 +129,14 @@ class FederatedLearningCoordinator:
                     client_id=resolved_client_id,
                     device_id=normalized_device,
                     capabilities=capabilities or {},
-                    last_seen=self._utcnow_iso(),
+                    last_seen=datetime.now(timezone.utc).isoformat(),
                 )
                 self.clients[resolved_client_id] = record
             else:
                 record.device_id = normalized_device
                 if capabilities:
                     record.capabilities = capabilities
-                record.last_seen = self._utcnow_iso()
+                record.last_seen = datetime.now(timezone.utc).isoformat()
 
             return {
                 "status": "registered",
@@ -102,13 +153,13 @@ class FederatedLearningCoordinator:
             if client_id:
                 record = self.clients.get(client_id)
                 if record is not None:
-                    record.last_seen = self._utcnow_iso()
+                    record.last_seen = datetime.now(timezone.utc).isoformat()
 
             return {
                 "status": "ok",
                 "round_id": self.current_round,
                 "global_model_version": self.global_model_version,
-                "weights": list(self.global_weights),
+                "weights": self.global_weights.tolist() if self.global_weights is not None else [],
                 "metadata": {
                     "algorithm": "weighted-delta-aggregation",
                     "max_delta_dim": self.max_delta_dim,
@@ -129,7 +180,7 @@ class FederatedLearningCoordinator:
         if not resolved_client_id:
             raise ValueError("client_id is required")
 
-        delta_values = [float(value) for value in weights_delta]
+        delta_values = [float(v) for v in weights_delta]
         if not delta_values:
             raise ValueError("weights_delta must not be empty")
         if len(delta_values) > self.max_delta_dim:
@@ -149,7 +200,7 @@ class FederatedLearningCoordinator:
                     "base_model_version does not match latest global model version"
                 )
 
-            if self.global_weights and len(delta_values) != len(self.global_weights):
+            if self.global_weights is not None and self.global_weights.size > 0 and len(delta_values) != len(self.global_weights):
                 raise ValueError("weights_delta length does not match global model dimensions")
 
             update = FLUpdateRecord(
@@ -159,13 +210,12 @@ class FederatedLearningCoordinator:
                 num_samples=max(1, int(num_samples)),
                 weights_delta=delta_values,
                 metrics=metrics or {},
-                submitted_at=self._utcnow_iso(),
+                submitted_at=datetime.now(timezone.utc).isoformat(),
             )
 
             bucket = self.updates_by_round.setdefault(int(round_id), [])
             bucket.append(update)
-
-            self.clients[resolved_client_id].last_seen = self._utcnow_iso()
+            self.clients[resolved_client_id].last_seen = datetime.now(timezone.utc).isoformat()
 
             return {
                 "status": "accepted",
@@ -205,23 +255,29 @@ class FederatedLearningCoordinator:
                     "global_model_version": self.global_model_version,
                 }
 
-            total_samples = sum(max(1, int(update.num_samples)) for update in compatible_updates)
-            aggregate_delta = [0.0] * expected_dim
+            total_samples = sum(max(1, u.num_samples) for u in compatible_updates)
+            aggregate_delta = np.zeros(expected_dim)
             for update in compatible_updates:
-                weight = max(1, int(update.num_samples)) / max(total_samples, 1)
-                for idx, value in enumerate(update.weights_delta):
-                    aggregate_delta[idx] += value * weight
+                weight = max(1, update.num_samples) / max(total_samples, 1)
+                aggregate_delta += np.array(update.weights_delta) * weight
 
-            if not self.global_weights:
-                self.global_weights = [0.0] * expected_dim
+            # Gradient norm clipping
+            norm = np.linalg.norm(aggregate_delta)
+            max_norm = 5.0
+            if norm > max_norm:
+                aggregate_delta = (aggregate_delta / norm) * max_norm
+                logger.info("Clipped aggregate delta norm from %.2f to %.2f", norm, max_norm)
 
-            self.global_weights = [
-                self.global_weights[idx] + aggregate_delta[idx]
-                for idx in range(expected_dim)
-            ]
+            if self.global_weights is None or len(self.global_weights) == 0:
+                self.global_weights = np.zeros(expected_dim)
+            elif len(self.global_weights) != expected_dim:
+                raise ValueError("Global weights dimension mismatch")
+
+            # Apply aggregated deltas to global weights
+            self.global_weights += aggregate_delta
 
             self.global_model_version += 1
-            self.updates_by_round[target_round] = []
+            self.updates_by_round[target_round] = []  # clear queued updates
 
             if target_round == self.current_round:
                 self.current_round += 1

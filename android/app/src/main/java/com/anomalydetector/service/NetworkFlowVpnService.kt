@@ -3,7 +3,10 @@ package com.anomalydetector.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
@@ -81,6 +84,19 @@ class NetworkFlowVpnService : VpnService() {
     private fun startVpnFlow() {
         if (captureJob != null || tunInterface != null || detachedTunFd != null) {
             broadcastVpnStatus("VPN flow capture already running", active = true)
+            return
+        }
+
+        // Flaw #19: VPN Conflict Detection
+        if (isVpnAlreadyActive()) {
+            scope.launch {
+                persistStatusEvent(
+                    status = "vpn_conflict",
+                    message = "Another VPN is active. Network capture disabled to prevent conflict."
+                )
+            }
+            broadcastVpnStatus("VPN Conflict: Capture disabled", active = false)
+            updateNotification("Capture disabled: Another VPN is active")
             return
         }
 
@@ -339,6 +355,13 @@ class NetworkFlowVpnService : VpnService() {
         scope.launch {
             persistStatusEvent(status, message)
         }
+    }
+
+    private fun isVpnAlreadyActive(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
     }
 
     private fun buildNotification(content: String): Notification {

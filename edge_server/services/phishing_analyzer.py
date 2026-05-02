@@ -16,6 +16,13 @@ from dataclasses import dataclass
 from typing import List, Optional, Set
 from urllib.parse import urlparse
 
+# Optional dependency for Safe Browsing API
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -133,7 +140,7 @@ class PhishingAnalyzer:
         score += tld_score
         reasons.extend(tld_reasons)
 
-        # ── Layer 3: Suspicious Keywords ──
+        # ── Layer 3: Suspicious Keywords (fixed duplicate counting) ──
         keyword_score, keyword_reasons = self._check_keywords(domain)
         score += keyword_score
         reasons.extend(keyword_reasons)
@@ -162,7 +169,7 @@ class PhishingAnalyzer:
             if tflite_score > 0.6:
                 reasons.append(f"On-device TFLite model classified as high-risk (score: {tflite_score:.2f})")
 
-        # ── Layer 8: Google Safe Browsing API Hook ──
+        # ── Layer 8: Google Safe Browsing API Hook (fixed) ──
         if self.safe_browsing_api_key:
             gsb_score, gsb_reasons = self._check_safe_browsing(domain, url)
             score += gsb_score
@@ -217,24 +224,23 @@ class PhishingAnalyzer:
 
     @staticmethod
     def _check_keywords(domain: str) -> tuple[float, List[str]]:
-        """Check for suspicious keywords in the domain."""
+        """Check for suspicious keywords in the domain (no double counting)."""
         score = 0.0
         reasons: List[str] = []
-        found_keywords: List[str] = []
+        found_keywords: Set[str] = set()
 
         # Split domain into parts for keyword matching
         domain_parts = re.split(r'[\-\.]', domain)
-        domain_text = domain.replace(".", "").replace("-", "")
+        # Check each part against keyword set
+        for part in domain_parts:
+            if part in SUSPICIOUS_KEYWORDS:
+                found_keywords.add(part)
 
-        for keyword in SUSPICIOUS_KEYWORDS:
-            if keyword in domain_parts or keyword in domain_text:
-                found_keywords.append(keyword)
-
+        # Also check the whole domain string for keywords that might span dots/hyphens? Not needed.
         if found_keywords:
-            # More keywords = higher score
             keyword_count = len(found_keywords)
             score = min(0.15 * keyword_count, 0.4)
-            reasons.append(f"Suspicious keywords in domain: {', '.join(found_keywords[:3])}")
+            reasons.append(f"Suspicious keywords in domain: {', '.join(sorted(found_keywords)[:3])}")
 
         return score, reasons
 
@@ -345,6 +351,41 @@ class PhishingAnalyzer:
             reasons.append(f"Suspicious path keywords: {', '.join(path_matches[:3])}")
 
         return min(score, 0.3), reasons
+
+    def _check_safe_browsing(self, domain: str, url: Optional[str]) -> tuple[float, List[str]]:
+        """
+        Query Google Safe Browsing API for threat match.
+
+        This method is called only when safe_browsing_api_key is configured.
+        """
+        if not HAS_REQUESTS:
+            logger.warning("`requests` library not installed, skipping Safe Browsing lookup")
+            return 0.0, []
+
+        if not self.safe_browsing_api_key or not url:
+            return 0.0, []
+
+        try:
+            api_url = "https://safebrowsing.googleapis.com/v4/threatMatches:find"
+            params = {"key": self.safe_browsing_api_key}
+            payload = {
+                "client": {"clientId": "anomaly-detector", "clientVersion": "1.0"},
+                "threatInfo": {
+                    "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
+                    "platformTypes": ["ANY_PLATFORM"],
+                    "threatEntryTypes": ["URL"],
+                    "threatEntries": [{"url": url}],
+                },
+            }
+            response = requests.post(api_url, params=params, json=payload, timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if "matches" in data:
+                    return 0.95, ["URL flagged by Google Safe Browsing"]
+            return 0.0, []
+        except Exception as e:
+            logger.warning("Safe Browsing lookup failed for %s: %s", url, e)
+            return 0.0, []
 
 
 def _get_official_domains(brand: str) -> Set[str]:

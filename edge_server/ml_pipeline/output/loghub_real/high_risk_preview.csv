@@ -1,0 +1,301 @@
+text,level,tag,message,weak_label,attack_probability,predicted_attack_tuned
+W System.err at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponse(HttpURLConnectionImpl.java:405),W,System.err,at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponse(HttpURLConnectionImpl.java:405),1,0.999995558607701,1
+W System.err at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponseCode(HttpURLConnectionImpl.java:521),W,System.err,at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponseCode(HttpURLConnectionImpl.java:521),1,0.999995558607701,1
+W System.err at com.b.a.m.a(Unknown Source),W,System.err,at com.b.a.m.a(Unknown Source),1,0.9999950860197233,1
+W System.err at com.b.a.m.q(Unknown Source),W,System.err,at com.b.a.m.q(Unknown Source),1,0.9999950860197233,1
+E CHR_HWASDiv getAsdivWorkState: error!,E,CHR_HWASDiv,getAsdivWorkState: error!,1,0.999994926270973,1
+E CalendarProvider Log error:error:getLogField--NoSuchFieldExceptionLog,E,CalendarProvider,Log error:error:getLogField--NoSuchFieldExceptionLog,1,0.9999946240582751,1
+W System.err at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1028),W,System.err,at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1028),1,0.9999945882595066,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:664),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:664),1,0.9999927812164493,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:664),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:664),1,0.9999927812164493,1
+W System.err at com.dianping.nvnetwork.o.b(NVGlobalConfig.java:265),W,System.err,at com.dianping.nvnetwork.o.b(NVGlobalConfig.java:265),1,0.9999926551858317,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+W System.err at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),W,System.err,at com.huawei.android.manufacture.ProjectMenuCustEx.getApparatusModel(ProjectMenuCustEx.java:79),1,0.999992517756991,1
+E HwWechatOptimizeImpl failed parsing switch file IO error,E,HwWechatOptimizeImpl,failed parsing switch file IO error,1,0.9999922075120825,1
+W System.err at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:183),W,System.err,at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:183),1,0.9999916053561831,1
+E libteec fd received!,E,libteec,fd received!,1,0.9999910200102727,1
+E libteec fd received!,E,libteec,fd received!,1,0.9999910200102727,1
+E libteec fd received!,E,libteec,fd received!,1,0.9999910200102727,1
+E libteec fd received!,E,libteec,fd received!,1,0.9999910200102727,1
+E libteec fd received!,E,libteec,fd received!,1,0.9999910200102727,1
+W System.err at com.android.okhttp.internal.http.HttpEngine.readResponse(HttpEngine.java:778),W,System.err,at com.android.okhttp.internal.http.HttpEngine.readResponse(HttpEngine.java:778),1,0.999989981695493,1
+W System.err at com.android.server.TelephonyRegistry.checkListenerPermission(TelephonyRegistry.java:1588),W,System.err,at com.android.server.TelephonyRegistry.checkListenerPermission(TelephonyRegistry.java:1588),1,0.9999897128397294,1
+W System.err at org.kxml2.io.KXmlParser.readValue(KXmlParser.java:1357),W,System.err,at org.kxml2.io.KXmlParser.readValue(KXmlParser.java:1357),1,0.9999892706631495,1
+W System.err at org.kxml2.io.KXmlParser.readValue(KXmlParser.java:1357),W,System.err,at org.kxml2.io.KXmlParser.readValue(KXmlParser.java:1357),1,0.9999892706631495,1
+W System.err at org.kxml2.io.KXmlParser.fillBuffer(KXmlParser.java:1516),W,System.err,at org.kxml2.io.KXmlParser.fillBuffer(KXmlParser.java:1516),1,0.9999892706631495,1
+W System.err at com.sankuai.mtmp.g.o.read(ObservableReader.java:42),W,System.err,at com.sankuai.mtmp.g.o.read(ObservableReader.java:42),1,0.9999888637850788,1
+W System.err at com.sankuai.mtmp.g.o.read(ObservableReader.java:42),W,System.err,at com.sankuai.mtmp.g.o.read(ObservableReader.java:42),1,0.9999888637850788,1
+W System.err at com.android.server.pm.PackageManagerService.onTransact(PackageManagerService.java:3509),W,System.err,at com.android.server.pm.PackageManagerService.onTransact(PackageManagerService.java:3509),1,0.9999879412586135,1
+W System.err java.io.FileNotFoundException: /storage/emulated/0/.mat/47ae3347aa0996fd6fb8287625379e1a/1481977911163 (No such file or directory),W,System.err,java.io.FileNotFoundException: /storage/emulated/0/.mat/47ae3347aa0996fd6fb8287625379e1a/1481977911163 (No such file or directory),1,0.9999876536152491,1
+W System.err at android.provider.Settings.checkAndNoteWriteSettingsOperation(Settings.java:9428),W,System.err,at android.provider.Settings.checkAndNoteWriteSettingsOperation(Settings.java:9428),1,0.9999855156013373,1
+W System.err at android.provider.Settings.checkAndNoteWriteSettingsOperation(Settings.java:9428),W,System.err,at android.provider.Settings.checkAndNoteWriteSettingsOperation(Settings.java:9428),1,0.9999855156013373,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+"E SQLiteDatabase android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",E,SQLiteDatabase,"android.database.sqlite.SQLiteCantOpenDatabaseException: unknown error (Sqlite code 14): Could not open database, (OS error - 13:Permission denied)",1,0.9999836093096888,1
+W System.err at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),W,System.err,at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforce(ContextImpl.java:1756),W,System.err,at android.app.ContextImpl.enforce(ContextImpl.java:1756),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforce(ContextImpl.java:1756),W,System.err,at android.app.ContextImpl.enforce(ContextImpl.java:1756),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforce(ContextImpl.java:1756),W,System.err,at android.app.ContextImpl.enforce(ContextImpl.java:1756),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforce(ContextImpl.java:1756),W,System.err,at android.app.ContextImpl.enforce(ContextImpl.java:1756),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforce(ContextImpl.java:1756),W,System.err,at android.app.ContextImpl.enforce(ContextImpl.java:1756),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),W,System.err,at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),W,System.err,at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),1,0.9999830510128543,1
+W System.err at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),W,System.err,at android.app.ContextImpl.enforceCallingOrSelfPermission(ContextImpl.java:1788),1,0.9999830510128543,1
+W System.err at android.content.ContentResolver.query(ContentResolver.java:541),W,System.err,at android.content.ContentResolver.query(ContentResolver.java:541),1,0.9999823607320616,1
+W System.err at android.content.ContentResolver.query(ContentResolver.java:476),W,System.err,at android.content.ContentResolver.query(ContentResolver.java:476),1,0.9999823607320616,1
+W System.err at android.content.ContentResolver.query(ContentResolver.java:541),W,System.err,at android.content.ContentResolver.query(ContentResolver.java:541),1,0.9999823607320616,1
+W System.err at java.io.BufferedReader.read1(BufferedReader.java:221),W,System.err,at java.io.BufferedReader.read1(BufferedReader.java:221),1,0.9999818589990637,1
+W System.err at java.io.BufferedReader.read1(BufferedReader.java:221),W,System.err,at java.io.BufferedReader.read1(BufferedReader.java:221),1,0.9999818589990637,1
+W System.err at java.io.FileOutputStream.<init>(FileOutputStream.java:169),W,System.err,at java.io.FileOutputStream.<init>(FileOutputStream.java:169),1,0.9999798906909657,1
+W System.err at java.io.FileOutputStream.<init>(FileOutputStream.java:169),W,System.err,at java.io.FileOutputStream.<init>(FileOutputStream.java:169),1,0.9999798906909657,1
+W System.err at java.io.FileOutputStream.<init>(FileOutputStream.java:169),W,System.err,at java.io.FileOutputStream.<init>(FileOutputStream.java:169),1,0.9999798906909657,1
+W System.err at java.io.FileOutputStream.<init>(FileOutputStream.java:169),W,System.err,at java.io.FileOutputStream.<init>(FileOutputStream.java:169),1,0.9999798906909657,1
+W System.err at java.io.FileOutputStream.<init>(FileOutputStream.java:169),W,System.err,at java.io.FileOutputStream.<init>(FileOutputStream.java:169),1,0.9999798906909657,1
+W System.err at com.android.phone.PhoneInterfaceManager.getCellLocation(PhoneInterfaceManager.java:1821),W,System.err,at com.android.phone.PhoneInterfaceManager.getCellLocation(PhoneInterfaceManager.java:1821),1,0.9999798822505088,1
+W System.err at com.android.phone.PhoneInterfaceManager.getCellLocationForSubscriber(PhoneInterfaceManager.java:1825),W,System.err,at com.android.phone.PhoneInterfaceManager.getCellLocationForSubscriber(PhoneInterfaceManager.java:1825),1,0.9999798822505088,1
+W System.err at com.android.phone.PhoneInterfaceManager.getCellLocation(PhoneInterfaceManager.java:1821),W,System.err,at com.android.phone.PhoneInterfaceManager.getCellLocation(PhoneInterfaceManager.java:1821),1,0.9999798822505088,1
+W System.err at com.android.phone.PhoneInterfaceManager.enforceFineOrCoarseLocationPermission(PhoneInterfaceManager.java:1902),W,System.err,at com.android.phone.PhoneInterfaceManager.enforceFineOrCoarseLocationPermission(PhoneInterfaceManager.java:1902),1,0.9999798822505088,1
+W System.err at com.dianping.nvnetwork.wns.b.<clinit>(RxWnsHttpService.java:20),W,System.err,at com.dianping.nvnetwork.wns.b.<clinit>(RxWnsHttpService.java:20),1,0.9999792873285526,1
+W System.err at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getHeaderField(HttpURLConnectionImpl.java:191),W,System.err,at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getHeaderField(HttpURLConnectionImpl.java:191),1,0.9999778155269167,1
+W System.err at com.iqiyi.b.com3.a(Unknown Source),W,System.err,at com.iqiyi.b.com3.a(Unknown Source),1,0.9999761068875317,1
+W System.err at com.dianping.nvnetwork.fork.a.<init>(RxForkHttpService.java:54),W,System.err,at com.dianping.nvnetwork.fork.a.<init>(RxForkHttpService.java:54),1,0.9999745640385079,1
+W System.err at com.android.server.am.BatteryStatsService.noteStartVideo(BatteryStatsService.java:756),W,System.err,at com.android.server.am.BatteryStatsService.noteStartVideo(BatteryStatsService.java:756),1,0.9999739461358353,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:690),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:690),1,0.9999738125414788,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:690),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:690),1,0.9999738125414788,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:690),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:690),1,0.9999738125414788,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:690),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:690),1,0.9999738125414788,1
+W System.err at android.content.res.AssetManager.open(AssetManager.java:690),W,System.err,at android.content.res.AssetManager.open(AssetManager.java:690),1,0.9999738125414788,1
+W System.err at com.android.okhttp.okio.AsyncTimeout.exit(AsyncTimeout.java:261),W,System.err,at com.android.okhttp.okio.AsyncTimeout.exit(AsyncTimeout.java:261),1,0.9999732761702219,1
+W System.err at com.android.internal.app.IBatteryStats$Stub.onTransact(IBatteryStats.java:81),W,System.err,at com.android.internal.app.IBatteryStats$Stub.onTransact(IBatteryStats.java:81),1,0.999970240143356,1
+W System.err at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getHeaders(HttpURLConnectionImpl.java:162),W,System.err,at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getHeaders(HttpURLConnectionImpl.java:162),1,0.9999700334835113,1
+W System.err at com.android.okhttp.internal.http.RetryableSink.writeToSocket(RetryableSink.java:78),W,System.err,at com.android.okhttp.internal.http.RetryableSink.writeToSocket(RetryableSink.java:78),1,0.9999685407290787,1
+W System.err at android.provider.Settings$System.putString(Settings.java:1926),W,System.err,at android.provider.Settings$System.putString(Settings.java:1926),1,0.9999646628039633,1
+E FontFamily Error mapping font file /system/fonts/slim.ttf,E,FontFamily,Error mapping font file /system/fonts/slim.ttf,1,0.9999640070819542,1
+E FontFamily Error mapping font file /system/fonts/slim.ttf,E,FontFamily,Error mapping font file /system/fonts/slim.ttf,1,0.9999640070819542,1
+W System.err at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),W,System.err,at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),1,0.9999630962156835,1
+W System.err at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),W,System.err,at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),1,0.9999630962156835,1
+W System.err at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),W,System.err,at com.dianping.nvnetwork.q.call(NVGlobalConfig.java:1364),1,0.9999630962156835,1
+W System.err at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),W,System.err,at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),1,0.9999625835201457,1
+W System.err at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),W,System.err,at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),1,0.9999625835201457,1
+W System.err at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),W,System.err,at android.content.ContextWrapper.enforceCallingOrSelfPermission(ContextWrapper.java:707),1,0.9999625835201457,1
+E libteec end,E,libteec,end,1,0.9999623506500145,1
+E libteec end,E,libteec,end,1,0.9999623506500145,1
+E libteec qsc_start_app end,E,libteec,qsc_start_app end,1,0.9999623506500145,1
+E libteec end,E,libteec,end,1,0.9999623506500145,1
+E libteec qsc_start_app end,E,libteec,qsc_start_app end,1,0.9999623506500145,1
+E libteec qsc_start_app end,E,libteec,qsc_start_app end,1,0.9999623506500145,1
+W System.err at java.io.FileOutputStream.open(Native Method),W,System.err,at java.io.FileOutputStream.open(Native Method),1,0.9999619465488783,1
+W System.err at java.io.FileOutputStream.open(Native Method),W,System.err,at java.io.FileOutputStream.open(Native Method),1,0.9999619465488783,1
+W System.err at java.io.FileOutputStream.open(Native Method),W,System.err,at java.io.FileOutputStream.open(Native Method),1,0.9999619465488783,1
+E ECS at com.huawei.utils.StringUtil.parserIPAddress(StringUtil.java:642),E,ECS,at com.huawei.utils.StringUtil.parserIPAddress(StringUtil.java:642),1,0.9999607944711753,1
+W System.err java.io.FileNotFoundException: /storage/emulated/0/QIYIVideo/image_cache/pic5.qiyipic.com_common_20161122_50b0fd771a584fd6a9734cc8d701f1b3.jpg.qiyi_suffix_pic (No such file or directory),W,System.err,java.io.FileNotFoundException: /storage/emulated/0/QIYIVideo/image_cache/pic5.qiyipic.com_common_20161122_50b0fd771a584fd6a9734cc8d701f1b3.jpg.qiyi_suffix_pic (No such file or directory),1,0.9999592190168053,1
+W System.err java.io.FileNotFoundException: /storage/emulated/0/QIYIVideo/image_boot_cache/pic5.qiyipic.com_common_20161215_5bfb4216f18f4826a722483b74c27a00.jpg.qiyi_suffix_pic (No such file or directory),W,System.err,java.io.FileNotFoundException: /storage/emulated/0/QIYIVideo/image_boot_cache/pic5.qiyipic.com_common_20161215_5bfb4216f18f4826a722483b74c27a00.jpg.qiyi_suffix_pic (No such file or directory),1,0.9999592190168053,1
+W System.err at org.kxml2.io.KXmlParser.next(KXmlParser.java:393),W,System.err,at org.kxml2.io.KXmlParser.next(KXmlParser.java:393),1,0.9999569168401435,1
+W System.err at com.qiyi.video.homepage.popup.a.prn.b(Unknown Source),W,System.err,at com.qiyi.video.homepage.popup.a.prn.b(Unknown Source),1,0.9999565781338273,1
+W System.err at com.qiyi.video.WelcomeActivity.a(Unknown Source),W,System.err,at com.qiyi.video.WelcomeActivity.a(Unknown Source),1,0.9999565781338273,1
+W System.err at com.qiyi.video.c.lpt9.l(Unknown Source),W,System.err,at com.qiyi.video.c.lpt9.l(Unknown Source),1,0.9999565781338273,1
+W System.err at org.kxml2.io.KXmlParser.next(KXmlParser.java:313),W,System.err,at org.kxml2.io.KXmlParser.next(KXmlParser.java:313),1,0.9999547857594722,1
+W System.err at java.lang.ClassLoader.loadClass(ClassLoader.java:380),W,System.err,at java.lang.ClassLoader.loadClass(ClassLoader.java:380),1,0.9999542923943017,1
+"W System.err null [1:3210] Invalid color ""#fofofo"".",W,System.err,"null [1:3210] Invalid color ""#fofofo"".",1,0.9999539287073889,1
+W System.err at com.huawei.android.chr.network.ChrNetwork.setNetLostEvent(ChrNetwork.java:1711),W,System.err,at com.huawei.android.chr.network.ChrNetwork.setNetLostEvent(ChrNetwork.java:1711),1,0.9999524313845367,1
+W System.err at com.huawei.android.chr.network.ChrNetwork.reportNetworkChr(ChrNetwork.java:554),W,System.err,at com.huawei.android.chr.network.ChrNetwork.reportNetworkChr(ChrNetwork.java:554),1,0.9999524313845367,1
+W System.err at com.huawei.android.chr.network.ChrNetwork.setNetLostEvent(ChrNetwork.java:1711),W,System.err,at com.huawei.android.chr.network.ChrNetwork.setNetLostEvent(ChrNetwork.java:1711),1,0.9999524313845367,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),W,System.err,at com.huawei.android.chr.qcom.QcomModemInfoCollector.getHardWareVersion(QcomModemInfoCollector.java:1462),1,0.9999521361334296,1
+W System.err at org.qiyi.basecore.utils.FileUtils.selectDir(Unknown Source),W,System.err,at org.qiyi.basecore.utils.FileUtils.selectDir(Unknown Source),1,0.9999484988267028,1
+W System.err at java.lang.Class.forName(Class.java:326),W,System.err,at java.lang.Class.forName(Class.java:326),1,0.9999384693784271,1
+W System.err at java.lang.Class.forName(Class.java:326),W,System.err,at java.lang.Class.forName(Class.java:326),1,0.9999384693784271,1
+W System.err at java.lang.Class.forName(Class.java:326),W,System.err,at java.lang.Class.forName(Class.java:326),1,0.9999384693784271,1
+W System.err at com.iqiyi.a.a.nul.a(Unknown Source),W,System.err,at com.iqiyi.a.a.nul.a(Unknown Source),1,0.9999308567022709,1
+W System.err at com.iqiyi.a.a.nul.a(Unknown Source),W,System.err,at com.iqiyi.a.a.nul.a(Unknown Source),1,0.9999308567022709,1
+W System.err at com.iqiyi.a.a.nul.a(Unknown Source),W,System.err,at com.iqiyi.a.a.nul.a(Unknown Source),1,0.9999308567022709,1
+W System.err at com.amap.api.location.core.a.a(AuthManager.java:35),W,System.err,at com.amap.api.location.core.a.a(AuthManager.java:35),1,0.999926841798723,1
+W System.err at org.apache.http.impl.conn.AbstractPoolEntry.open(AbstractPoolEntry.java:169),W,System.err,at org.apache.http.impl.conn.AbstractPoolEntry.open(AbstractPoolEntry.java:169),1,0.9999266355056035,1
+E HwIntelligent3_AppUsageInfoManger isSystemApp name not found : vcheng.com error is android.content.pm.PackageManager$NameNotFoundException: vcheng.com,E,HwIntelligent3_AppUsageInfoManger,isSystemApp name not found : vcheng.com error is android.content.pm.PackageManager$NameNotFoundException: vcheng.com,1,0.9999230531118233,1
+W System.err (32101),W,System.err,(32101),1,0.9999195894902307,1
+W System.err (32101),W,System.err,(32101),1,0.9999195894902307,1
+E WifiMonitor WifiMonitor:wlan0 cnt=31227 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,E,WifiMonitor,WifiMonitor:wlan0 cnt=31227 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,1,0.9999193754771079,1
+E WifiMonitor WifiMonitor:wlan0 cnt=31354 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,E,WifiMonitor,WifiMonitor:wlan0 cnt=31354 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,1,0.9999193754771079,1
+E WifiMonitor WifiMonitor:wlan0 cnt=31307 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,E,WifiMonitor,WifiMonitor:wlan0 cnt=31307 dispatchEvent: CTRL-EVENT-NETWORK-NOT-FOUND,1,0.9999193754771079,1
+W System.err at com.android.okhttp.internal.http.HttpConnection.writeRequestBody(HttpConnection.java:240),W,System.err,at com.android.okhttp.internal.http.HttpConnection.writeRequestBody(HttpConnection.java:240),1,0.9999191468723848,1
+E AppLogApi/AutoUploadService createBiglogzip failed!,E,AppLogApi/AutoUploadService,createBiglogzip failed!,1,0.9999185201345272,1
+W System.err at com.android.okhttp.okio.RealBufferedSink.flush(RealBufferedSink.java:221),W,System.err,at com.android.okhttp.okio.RealBufferedSink.flush(RealBufferedSink.java:221),1,0.9999097111161954,1
+W System.err at com.amap.api.location.core.g.a(HttpTool.java:90),W,System.err,at com.amap.api.location.core.g.a(HttpTool.java:90),1,0.9999096180236662,1
+W System.err at com.iqiyi.a.a.aux.a(Unknown Source),W,System.err,at com.iqiyi.a.a.aux.a(Unknown Source),1,0.9999085499252601,1
+W System.err at com.iqiyi.a.a.aux.a(Unknown Source),W,System.err,at com.iqiyi.a.a.aux.a(Unknown Source),1,0.9999085499252601,1
+W System.err at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:56),W,System.err,at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:56),1,0.9999036302876967,1
+W System.err at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:56),W,System.err,at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:56),1,0.9999036302876967,1
+W System.err at java.net.SocketOutputStream.socketWrite(SocketOutputStream.java:112),W,System.err,at java.net.SocketOutputStream.socketWrite(SocketOutputStream.java:112),1,0.9999031687634894,1
+W System.err at com.google.locate.b.a(GoogleLocationClient.java:200),W,System.err,at com.google.locate.b.a(GoogleLocationClient.java:200),1,0.9998988114383058,1
+W System.err at com.google.locate.b.a(GoogleLocationClient.java:200),W,System.err,at com.google.locate.b.a(GoogleLocationClient.java:200),1,0.9998988114383058,1
+E SDK <2016-12-17 23:24:04> [ERR] SDK: UE-SeC 2016-12-17 23:24:4:423 Level[ERR] magic[2322426144 1189]:FSM_Tool_TreatFolderKeyInfoNew =>GetKeyInfo  error[-1000],E,SDK,<2016-12-17 23:24:04> [ERR] SDK: UE-SeC 2016-12-17 23:24:4:423 Level[ERR] magic[2322426144 1189]:FSM_Tool_TreatFolderKeyInfoNew =>GetKeyInfo  error[-1000],1,0.9998968419740079,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W System.err ... 9 more,W,System.err,... 9 more,1,0.9998947103212016,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bS(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W PushLog2824 at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),W,PushLog2824,at com.huawei.android.pushagent.utils.bastet.PushBastet.bR(Unknown Source),1,0.9998887801308914,1
+W System.err at android.content.res.AssetManager.openAsset(Native Method),W,System.err,at android.content.res.AssetManager.openAsset(Native Method),1,0.9998852369518699,1
+W System.err at android.content.res.AssetManager.openAsset(Native Method),W,System.err,at android.content.res.AssetManager.openAsset(Native Method),1,0.9998852369518699,1
+W System.err java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,W,System.err,java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,1,0.9998846098795843,1
+W System.err java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,W,System.err,java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,1,0.9998846098795843,1
+W System.err java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,W,System.err,java.lang.SecurityException: Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS,1,0.9998846098795843,1
+W System.err at org.apache.http.impl.conn.DefaultClientConnectionOperator.openConnection(DefaultClientConnectionOperator.java:195),W,System.err,at org.apache.http.impl.conn.DefaultClientConnectionOperator.openConnection(DefaultClientConnectionOperator.java:195),1,0.9998843164530643,1
+W System.err at java.lang.ClassLoader.loadClass(ClassLoader.java:312),W,System.err,at java.lang.ClassLoader.loadClass(ClassLoader.java:312),1,0.9998839174228732,1
+W System.err at java.lang.ClassLoader.loadClass(ClassLoader.java:312),W,System.err,at java.lang.ClassLoader.loadClass(ClassLoader.java:312),1,0.9998839174228732,1
+E ThermalEngine Error in validating clients,E,ThermalEngine,Error in validating clients,1,0.9998833182045817,1
+E ThermalEngine Error in validating clients,E,ThermalEngine,Error in validating clients,1,0.9998833182045817,1
+E ThermalEngine Error in validating clients,E,ThermalEngine,Error in validating clients,1,0.9998833182045817,1
+W System.err at org.chromium.base.MemoryChecker.b(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.b(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.d(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.d(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.d(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.d(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.d(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.d(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.d(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.d(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.d(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.d(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.a(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.a(Unknown Source),1,0.9998756776693302,1
+W System.err at org.chromium.base.MemoryChecker.a(Unknown Source),W,System.err,at org.chromium.base.MemoryChecker.a(Unknown Source),1,0.9998756776693302,1
+W System.err at android.content.ContentProviderProxy.query(ContentProviderNative.java:421),W,System.err,at android.content.ContentProviderProxy.query(ContentProviderNative.java:421),1,0.9998746658913134,1
+W System.err at android.content.ContentProviderProxy.query(ContentProviderNative.java:421),W,System.err,at android.content.ContentProviderProxy.query(ContentProviderNative.java:421),1,0.9998746658913134,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1
+"E PTM.FileNodeInfo getTempInfo error: null, 0",E,PTM.FileNodeInfo,"getTempInfo error: null, 0",1,0.999871208484888,1

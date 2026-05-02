@@ -1,0 +1,78 @@
+{
+  "dataset": {
+    "kaggle_ref": "omduggineni/loghub-android-log-data",
+    "dataset_path": "/Users/vishal/.cache/kagglehub/datasets/omduggineni/loghub-android-log-data/versions/1",
+    "log_file": "/Users/vishal/.cache/kagglehub/datasets/omduggineni/loghub-android-log-data/versions/1/Android.log",
+    "parsed_rows": 1554941,
+    "train_rows": 1243952,
+    "validation_rows": 248791,
+    "test_rows": 310989,
+    "positive_ratio": 0.15360261257501087,
+    "task": "weak-label text anomaly classification"
+  },
+  "model": {
+    "type": "TfidfVectorizer + LogisticRegression",
+    "max_features": 12000,
+    "ngram_range": [
+      1,
+      2
+    ],
+    "class_weight": "balanced"
+  },
+  "threshold_tuning": {
+    "selected_threshold": 0.06,
+    "selection_details": {
+      "threshold": 0.06,
+      "precision": 0.6943015541216032,
+      "recall": 0.9995289807667146,
+      "f1_score": 0.8194143516035611,
+      "f2_score": 0.9187492483463618,
+      "selection_reason": "max recall with precision >= 0.65"
+    },
+    "baseline_threshold": 0.5
+  },
+  "metrics": {
+    "default_threshold_0_5": {
+      "accuracy": 0.9935303177925907,
+      "precision": 0.9818656669264306,
+      "recall": 0.9759048755469028,
+      "f1_score": 0.978876196875525,
+      "confusion_matrix": [
+        [
+          262359,
+          861
+        ],
+        [
+          1151,
+          46618
+        ]
+      ],
+      "roc_auc": 0.9991366203269261
+    },
+    "tuned_threshold": {
+      "accuracy": 0.9346182662409281,
+      "precision": 0.701521917969209,
+      "recall": 0.9996859888212021,
+      "f1_score": 0.8244749268393746,
+      "confusion_matrix": [
+        [
+          242902,
+          20318
+        ],
+        [
+          15,
+          47754
+        ]
+      ],
+      "roc_auc": 0.9991366203269261
+    },
+    "recall_delta": 0.023781113274299326,
+    "precision_delta": -0.2803437489572216
+  },
+  "artifacts": {
+    "pipeline": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/loghub_text_pipeline.pkl",
+    "report": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/training_report_text_model.json",
+    "threshold_config": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/threshold_config_text_model.json",
+    "preview": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/high_risk_preview.csv"
+  }
+}

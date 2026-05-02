@@ -1,0 +1,27 @@
+{
+  "version": "ensemble-v1",
+  "objective": "high-recall security demo",
+  "weights": {
+    "nsl": 0.567,
+    "loghub": 0.433
+  },
+  "thresholds": {
+    "nsl": 0.06,
+    "loghub": 0.06,
+    "ensemble": 0.42
+  },
+  "model_artifacts": {
+    "nsl_pipeline": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/nslkdd_real/rf_pipeline.pkl",
+    "loghub_pipeline": "/Users/vishal/Desktop/jarvis/AI-Log-Detector/edge_server/ml_pipeline/output/loghub_real/loghub_text_pipeline.pkl"
+  },
+  "training_snapshot": {
+    "nsl": {
+      "precision": 0.9168363351605325,
+      "recall": 0.9123353853346841
+    },
+    "loghub": {
+      "precision": 0.701521917969209,
+      "recall": 0.9996859888212021
+    }
+  }
+}

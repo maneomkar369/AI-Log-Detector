@@ -114,6 +114,16 @@ The project solves real-time detection of anomalies in Android behavioral and ne
 - Android telemetry to edge over secure WebSocket.
 - Dashboard connected to backend APIs and Redis event stream.
 
+### Patent Methodology: Localized Edge Air-Gap Architecture
+
+The topology is mathematically constrained to guarantee absolute data sovereignty over biometric telemetry. The system structurally implements the following protected architecture claim:
+*(a) a data collection service on an Android device;*
+*(b) a dedicated edge computing device on the same local network, distinct from the Android device, configured to receive all telemetry via WebSocket;*
+*(c) wherein no raw telemetry is transmitted to any cloud server;*
+*(d) a dashboard locally accessible for alert visualization.*
+
+This completely severs reliance on third-party cloud analytics, effectively air-gapping behavioral tracking to the local physical environment.
+
 ---
 
 ## 6. Mathematical Formulation
@@ -233,6 +243,15 @@ Supporting logic:
 - Drift detection for baseline adaptation.
 - Threat typology mapping for contextual alert labels.
 - Explainability layer for top contributing feature groups.
+
+### Patent Methodology: Monotonically Blended Baseline Initialization
+
+To address the "cold-start" vulnerability of new devices, the system implements the following protected initialization method:
+*(a) retrieving a pre-computed generic baseline (μ₀, Σ₀) derived from anonymized behavioral data of a plurality of Android users;*
+*(b) during a warm-up phase of 24 hours, using said generic baseline as the anomaly reference;*
+*(c) subsequently blending the generic baseline with a personalized baseline using a mixing factor that decreases monotonically to zero over 7 days.*
+
+This technique ensures immediate zero-day protection using generalized behavioral metrics while dynamically tapering into hyper-personalized behavioral boundaries without jarring threshold jumps.
 
 ### Why This Model
 
@@ -458,3 +477,18 @@ Use this structure in every subsection:
 - Impact: improved detection consistency under correlated behavioral signals.
 
 This style makes your documentation more research-grade, evaluable, and publication-ready.
+
+---
+
+## 20. Operational Constraints and Troubleshooting
+
+1. **Ngrok Tunnel Expiry:** 
+   - The free tier of ngrok expires after 2 hours, which will cause the remote connection to drop. 
+   - *Workaround:* A script is provided at `scripts/restart_ngrok.sh`. You can configure a cron job or systemd timer to execute this script every 90 minutes to ensure continuous tunnel availability during long deployments.
+
+2. **ADB Device Re-authorisation:**
+   - If the Android device disconnects from the host (e.g., cable is unplugged or Wi-Fi drops), you must manually re-authorise the ADB connection. 
+   - *Note:* This is a security design constraint of the Android OS, not a bug in the anomaly detection system. Automatic re-authorisation would pose a severe security risk.
+
+3. **Logcat Noise on Dashboard:**
+   - The dashboard logcat stream automatically suppresses common noisy tags such as `avc: denied`, `auditd`, `bpf`, and `thermal` to ensure the security-relevant telemetry remains legible.

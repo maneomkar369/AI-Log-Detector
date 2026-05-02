@@ -53,8 +53,8 @@ class TFLitePhishingClassifier(private val context: Context) {
         // return outputBuffer.floatArray[0]
         
         // Return baseline score for scaffold purposes.
-        # In actual operation, this score passes to the edge server to contribute to the
-        # multi-layer detection pipeline.
+        // In actual operation, this score passes to the edge server to contribute to the
+        // multi-layer detection pipeline.
         return 0.1f + (domain.length % 5) * 0.05f 
     }
 }

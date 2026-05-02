@@ -12,7 +12,7 @@ from services.federated_learning import FederatedLearningCoordinator
 
 @pytest.mark.asyncio
 async def test_register_and_get_model():
-    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64)
+    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64, use_initial_model=False)
 
     registered = await coordinator.register_client(device_id="device_a")
     client_id = registered["client_id"]
@@ -28,7 +28,7 @@ async def test_register_and_get_model():
 
 @pytest.mark.asyncio
 async def test_submit_and_aggregate_with_force():
-    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64)
+    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64, use_initial_model=False)
 
     r1 = await coordinator.register_client(device_id="device_1")
     r2 = await coordinator.register_client(device_id="device_2")
@@ -58,7 +58,7 @@ async def test_submit_and_aggregate_with_force():
 
 @pytest.mark.asyncio
 async def test_reject_update_from_unknown_client():
-    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64)
+    coordinator = FederatedLearningCoordinator(min_updates_per_round=2, max_delta_dim=64, use_initial_model=False)
 
     with pytest.raises(ValueError, match="not registered"):
         await coordinator.submit_update(

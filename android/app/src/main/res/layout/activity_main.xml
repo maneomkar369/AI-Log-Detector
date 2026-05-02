@@ -537,6 +537,19 @@
                         app:backgroundTint="@color/action_button_bg" />
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearAll"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_mirror_chip_unselected"
+                        android:fontFamily="@font/inter_semibold"
+                        android:text="Clear All Alerts"
+                        android:textAllCaps="false"
+                        android:textColor="#D90429"
+                        android:textSize="15sp"
+                        app:backgroundTint="@android:color/transparent" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnVpnFlow"
                         android:layout_width="match_parent"
                         android:layout_height="54dp"

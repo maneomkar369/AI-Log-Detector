@@ -8,10 +8,11 @@ import json
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import numpy as np
 
 from config import settings
 from models.database import get_db
@@ -19,6 +20,7 @@ from models.alert import Alert
 from models.device import Device
 from services.alert_manager import AlertManager
 from services.action_executor import ActionExecutor
+from services.baseline_manager import BaselineManager
 from services.federated_learning import FederatedLearningCoordinator
 
 router = APIRouter(prefix="/api", tags=["API"])
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 alert_manager = AlertManager()
 action_executor = ActionExecutor()
+baseline_manager = BaselineManager()
 fl_coordinator = FederatedLearningCoordinator(
     min_updates_per_round=settings.fl_min_updates_per_round,
     max_delta_dim=settings.fl_max_delta_dim,
@@ -85,6 +88,8 @@ def _serialize_alert(alert: Alert) -> Dict[str, Any]:
         "threat_type": alert.threat_type,
         "message": alert.message,
         "confidence": alert.confidence,
+        "anomalyProbability": round(alert.anomaly_probability, 4),
+        "anomaly_probability": round(alert.anomaly_probability, 4),
         "mahalanobisDistance": alert.mahalanobis_distance,
         "actions": _parse_actions(alert.actions),
         "xaiExplanation": explanation,
@@ -127,6 +132,7 @@ async def get_device_alerts(
 @router.post("/alerts/{alert_id}/approve")
 async def approve_alert(
     alert_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """User approves neutralization for an alert."""
@@ -143,6 +149,17 @@ async def approve_alert(
     alert.action_executed = bool(results)
     alert.action_result = json.dumps(results)
     await db.commit()
+
+    # Notify device via WebSocket of neutralization (Flaw #26)
+    if results and any(r.get("success") for r in results):
+        connection_manager = request.app.state.connection_manager
+        await connection_manager.send_to_device(alert.device_id, json.dumps({
+            "type": "action_result",
+            "alert_id": alert_id,
+            "results": results,
+            "message": f"Successfully neutralized threat: {alert.threat_type}"
+        }))
+
     await _publish_alert_update(alert)
 
     return {
@@ -164,6 +181,54 @@ async def deny_alert(
     await db.commit()
     await _publish_alert_update(alert)
     return {"status": "denied", "anomalyId": alert.anomaly_id}
+
+
+@router.post("/alerts/{alert_id}/mark_normal")
+async def mark_normal(
+    alert_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    User corrects a false positive (Flaw #26).
+    Marks as 'normal' and performs high-weight baseline update.
+    """
+    alert = await alert_manager.mark_normal_alert(db, alert_id)
+    if not alert:
+        raise HTTPException(404, f"Alert {alert_id} not found")
+    
+    if not alert.feature_vector:
+        logger.warning("Alert %s has no feature_vector, skipping baseline update", alert_id)
+    else:
+        # Perform high-weight baseline update
+        device_result = await db.execute(select(Device).where(Device.id == alert.device_id))
+        device = device_result.scalar_one_or_none()
+        if device:
+            fv = np.array(json.loads(alert.feature_vector))
+            mean = device.get_baseline_mean()
+            cov = device.get_baseline_covariance()
+            
+            if mean is not None and cov is not None:
+                new_mean, new_cov = baseline_manager.apply_feedback(
+                    mean, cov, fv, device.baseline_sample_count
+                )
+                device.set_baseline_mean(new_mean)
+                device.set_baseline_covariance(new_cov)
+                logger.info("Feedback applied to baseline for device %s from alert %s", device.id, alert_id)
+
+    await db.commit()
+    await _publish_alert_update(alert)
+    return {"status": "normal", "anomalyId": alert.anomaly_id}
+
+
+@router.delete("/alerts/{device_id}")
+async def delete_all_alerts(
+    device_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset/Clear all alerts for a device."""
+    count = await alert_manager.delete_all_alerts(db, device_id)
+    await db.commit()
+    return {"status": "cleared", "device_id": device_id, "count": count}
 
 
 # ────────────────── Device Stats ──────────────────

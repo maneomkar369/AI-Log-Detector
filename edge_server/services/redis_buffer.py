@@ -23,7 +23,7 @@ class RedisBuffer:
     BUFFER_KEY_PREFIX = "events:"
     ALERTS_CHANNEL = "alerts"
     EVENTS_CHANNEL = "events"
-    BATCH_SIZE = 50
+    BATCH_SIZE = 5
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
